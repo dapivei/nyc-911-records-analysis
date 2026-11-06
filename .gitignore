@@ -1,0 +1,24 @@
+# Data and PDFs (Do not commit the 170,000+ pages of records)
+data/
+*.pdf
+*.csv
+*.xlsx
+*.zip
+
+# Python Virtual Environments
+venv/
+env/
+.env
+.venv
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
