@@ -1,0 +1,8 @@
+requests
+beautifulsoup4
+lxml
+pandas
+pyarrow
+duckdb
+# optional, only for step 6 (external data):
+geopandas
