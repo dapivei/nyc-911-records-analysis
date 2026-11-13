@@ -1,5 +1,11 @@
-# Data and PDFs (Do not commit the 170,000+ pages of records)
-data/
+# Ignore everything in data/ except data/final/
+data/*
+!data/final/
+
+# Ignore heavy database files inside data/final/
+data/final/*.duckdb
+
+# Ignore raw/archive formats
 *.pdf
 *.csv
 *.xlsx
@@ -21,6 +27,5 @@ __pycache__/
 
 # OS Generated Files
 .DS_Store
-Thumbs.dbdata/final/wtc911.duckdb
-data/final/wtc911.duckdb
-.DS_Store
+Thumbs.db
+
