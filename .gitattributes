@@ -1,2 +1,1 @@
 data/final/pages.parquet filter=lfs diff=lfs merge=lfs -text
-data/final/wtc911.duckdb filter=lfs diff=lfs merge=lfs -text
