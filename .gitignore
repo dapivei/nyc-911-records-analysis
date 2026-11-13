@@ -23,3 +23,4 @@ __pycache__/
 .DS_Store
 Thumbs.dbdata/final/wtc911.duckdb
 data/final/wtc911.duckdb
+.DS_Store
