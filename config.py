@@ -3,13 +3,13 @@ import os
 from pathlib import Path
 
 # --- who you are (the site asks automated users to be identifiable) ---------
-USER_AGENT = "wtc911-research"
+USER_AGENT = "wtc911-research (NYU course project; contact: PUT_YOUR_EMAIL_HERE)"
 
 # --- sources -----------------------------------------------------------------
 SITE = "https://911records.org"
 CITY_PDF_URL = "https://sept11documents.cityofnewyork.us/apps/content/September11_MD/{doc_id}.pdf"
 SECONDS_BETWEEN_REQUESTS = 1.0          # be polite: keep >= 1 for 911records.org
-ENTITY_TYPES = ["agency", "lab", "contractor", "substance", "address"]
+ENTITY_TYPES = ["agency", "lab", "contractor", "substance", "address", "signatory"]
 
 # --- folders -----------------------------------------------------------------
 DATA = Path("data")
