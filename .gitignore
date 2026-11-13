@@ -22,3 +22,4 @@ __pycache__/
 # OS Generated Files
 .DS_Store
 Thumbs.dbdata/final/wtc911.duckdb
+data/final/wtc911.duckdb
