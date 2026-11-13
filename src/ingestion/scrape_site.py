@@ -27,16 +27,16 @@ def scrape_entities(types=config.ENTITY_TYPES):
     """Scrapes the platform entities and maps them to their respective document pages.
 
     Process Phases:
-        - Listing Pages: Iteratively discovers and extracts all entities across different
-          sub-categories using a pagination-following queue. Removes duplicates by
-          entity type and slug, persisting the results to 'entities.parquet'.
-        - Mention Pages: For each discovered entity (excluding 'building'), extracts all
-          document pages where it appears at a rate of 50 records per page. Progressively
-          appends results into a JSON Lines format file.
+    - Listing Pages: Iteratively discovers and extracts all entities across different
+      sub-categories using a pagination-following queue. Removes duplicates by entity
+      type and slug, persisting the results to entities.parquet.
+    - Mention Pages: For each discovered entity (excluding building), extracts all
+      document pages where it appears at a rate of 50 records per page. Progressively
+      appends results into a JSON Lines format file.
 
     Resumable Mechanism:
-      This function references 'entity_done.txt' at initialization to skip any entity/slug
-      combinations that were fully processed in prior execution windows.
+    This function references entity_done.txt at initialization to skip any entity/slug
+    combinations that were fully processed in prior execution windows.
 
     Args:
         types (list, optional): List of target entity types to scrape.
@@ -49,8 +49,8 @@ def scrape_entities(types=config.ENTITY_TYPES):
     """
     rows = []
     for etype in types:
-        todo, seen = [f"/entities/{etype}"], set()
-        while todo:                                   # follow letter / pagination links
+        todo, seen = [f'/entities/{etype}'], set()
+        while todo:  # follow letter / pagination links
             url = todo.pop(0)
             if url in seen:
                 continue
@@ -59,35 +59,40 @@ def scrape_entities(types=config.ENTITY_TYPES):
             if html:
                 found, more = P.parse_entity_listing(html, etype)
                 rows += found
-                todo += more
-        print(f"  {etype}: {sum(r['entity_type'] == etype for r in rows)} entities")
-    entities = pd.DataFrame(rows).drop_duplicates(["entity_type", "slug"])
-    entities.to_parquet(OUT / "entities.parquet", index=False)
+                todo += [u for u in more if u not in seen]
+        print(f'  {etype}: {sum(r["entity_type"] == etype for r in rows)} entities')
 
-    done = done_keys(OUT / "entity_done.txt")
-    todo = entities[(entities.entity_type != "building") &
-                    ~(entities.entity_type + "/" + entities.slug).isin(done)]
-    print(f"  entity pages: {len(todo)} to go ({len(done)} done)")
+    entities = pd.DataFrame(rows).drop_duplicates(['entity_type', 'slug'])
+    entities.to_parquet(OUT / 'entities.parquet', index=False)
+
+    done = done_keys(OUT / 'entity_done.txt')
+    todo = entities[
+        (entities.entity_type != 'building')
+        & ~(entities.entity_type + '/' + entities.slug).isin(done)
+    ]
+    print(f'  entity pages: {len(todo)} to go ({len(done)} done)')
+
     for i, (etype, slug) in enumerate(zip(todo.entity_type, todo.slug), 1):
         seen, page, last_page = set(), 1, None
+        base_url = f'/signatory/{slug}' if etype == 'signatory' else f'/entity/{etype}/{slug}'
         while True:
-            html = get_page(f"/entity/{etype}/{slug}" + (f"?page={page}" if page > 1 else ""))
+            html = get_page(base_url + (f'?page={page}' if page > 1 else ''))
             if not html:
                 break
             parsed = P.parse_entity_page(html, etype, slug)
-            if page == 1 and parsed["total_records"]:
-                last_page = math.ceil(parsed["total_records"] / 50)   # 50 rows per page
-            new = [r for r in parsed["links"] if (r["doc_id"], r["page"]) not in seen]
+            if page == 1 and parsed['total_records']:
+                last_page = math.ceil(parsed['total_records'] / 50)  # 50 rows per page
+            new = [r for r in parsed['links'] if (r['doc_id'], r['page']) not in seen]
             if not new:
                 break
-            seen |= {(r["doc_id"], r["page"]) for r in new}
-            append_rows(OUT / "entity_mentions.jsonl", new)
+            seen |= {(r['doc_id'], r['page']) for r in new}
+            append_rows(OUT / 'entity_mentions.jsonl', new)
             page += 1
             if last_page and page > last_page:
                 break
-        mark_done(OUT / "entity_done.txt", [f"{etype}/{slug}"])
+        mark_done(OUT / 'entity_done.txt', [f'{etype}/{slug}'])
         if i % 100 == 0:
-            print(f"  entity pages {i}/{len(todo)}")
+            print(f'  entity pages {i}/{len(todo)}')
 
 
 def scrape_buildings():
@@ -102,6 +107,10 @@ def scrape_buildings():
       - data/interim/buildings.parquet: Master spatial structural catalog indexed by BIN.
       - data/interim/building_mentions.parquet: Relational mapping of bin -> doc_id -> page.
     """
+    html_map = get_page('/map') or ''
+    parsed_map = P.parse_map_page(html_map)
+    print(f"Extracted from map: {len(parsed_map)} | Unique BINs: {len({b['bin'] for b in parsed_map})}")
+
     bins = {b["bin"]: b for b in P.parse_map_page(get_page("/map") or "")}
     rows, links = [], []
     for i, b in enumerate(sorted(bins), 1):
