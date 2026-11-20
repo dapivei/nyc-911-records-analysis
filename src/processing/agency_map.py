@@ -50,7 +50,8 @@ AGENCIES = {
 
 
 # Public bodies the site filed as contractors (the "Corp." in the name looks like
-# a company). clean.py moves these entity rows to entity_type "agency".
+# a company but it is a joint New York State–New York City corporation and subsidiary of Empire State Development). 
+# clean.py moves these entity rows to entity_type "agency".
 CONTRACTOR_SLUGS_THAT_ARE_AGENCIES = {
     "lower-manhattan-development-corp",
     "the-lower-manhattan-development-corp",
