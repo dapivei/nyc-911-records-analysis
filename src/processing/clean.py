@@ -7,8 +7,10 @@ data/final/ is left untouched; every step here is a pure function
                      file size in MB, pdf_links as a list; doc_date = corrected
                      date (see dates.py; site_date kept as scraped); in_study_window flag
   pages              date = corrected doc_date where the page date came from the
-                     document; strip the portal header and Bates stamps
-                     from text; n_chars / alpha_ratio / has_usable_text flags
+                     document; strip the portal header, Bates and litigation
+                     stamps from text (litigation stamp kept in its own columns);
+                     rejoin words split across lines; n_chars / alpha_ratio /
+                     has_usable_text flags
   buildings          numeric units, floor area and class code; in_lower_manhattan flag
   entities           entity_id / entity_name merging name variants
                      (agencies: hand map in agency_map.py; contractors and labs:
@@ -37,6 +39,11 @@ SOURCE, OUT = config.FINAL, settings.PROCESSED
 
 PORTAL_HEADER_RE = r"NYC 9/11 Public Portal Document"
 BATES_STAMP_RE = r"NYC-WTC[ _]\d{9}"
+# Litigation stamps, e.g. "CITY_21MC100_004219846" (21 MC 100: the WTC disaster-site
+# lawsuits) or "CITY_DEP_WORBY_CANNATA_SUBP_..." (a subpoena). OCR mangles them
+# ("CITY_2IMCl00_0 04219846", "CITY_21MC1OO_OO576OO19"), so allow letters, digits,
+# spaces, _ and . before a final number in which O may stand for 0.
+LITIGATION_STAMP_RE = r"CITY_[A-Za-z0-9 _.]{0,40}?[0-9O][0-9O ]{4,}\d"
 WTC_MENTION_RE = r"world trade|\bwtc\b|ground zero|9/11|september 11"
 COMPANY_SUFFIXES = r"\b(inc|incorporated|llc|llp|lp|pc|pllc|corp|corporation|co|company|ltd|limited|the)\b"
 SIZE_UNITS_MB = {"KB": 1 / 1024, "MB": 1.0, "GB": 1024.0}
@@ -116,13 +123,30 @@ def clean_documents(documents: pd.DataFrame) -> pd.DataFrame:
 
 # --- pages --------------------------------------------------------------------
 
+def litigation_stamps(text: pd.Series) -> pd.DataFrame:
+    """litigation_stamp (as printed) and litigation_source ('21MC100' or the subpoena name)."""
+    stamp = text.fillna("").str.extract(f"({LITIGATION_STAMP_RE})", expand=False).str.strip()
+    compact = stamp.str.upper().str.replace(" ", "", regex=False)
+    subpoena = compact.str.extract(r"^CITY_(.+?SUBP)", expand=False)
+    # OCR adds or drops underscores ("DEP__WORBY_CANNATA_SUBP", "DEPWORBYCANNATASUBP"):
+    # group by letters/digits only and keep the most common spelling
+    key = subpoena.str.replace(r"[^A-Z0-9]", "", regex=True)
+    spelling = subpoena.groupby(key).agg(lambda s: s.value_counts().index[0])
+    source = key.map(spelling)
+    source = source.fillna(compact.where(compact.isna(), "21MC100"))   # all other stamps are 21 MC 100 (OCR variants)
+    return pd.DataFrame({"litigation_stamp": stamp, "litigation_source": source})
+
+
 def clean_page_text(text: pd.Series) -> pd.Series:
-    """Remove the portal header and Bates stamps; collapse whitespace, keep line breaks."""
+    """Remove the portal header, Bates and litigation stamps; collapse whitespace, keep
+    line breaks; rejoin words hyphenated across a line break ("carry-\\nout" -> "carryout")."""
     text = text.fillna("")
     text = text.str.replace(PORTAL_HEADER_RE, " ", regex=True)
     text = text.str.replace(BATES_STAMP_RE, " ", regex=True)
+    text = text.str.replace(LITIGATION_STAMP_RE, " ", regex=True)
     text = text.str.replace(r"[ \t\f\r]+", " ", regex=True)
     text = text.str.replace(r"\s*\n\s*", "\n", regex=True)
+    text = text.str.replace(r"([A-Za-z])-\n([a-z])", r"\1\2", regex=True)
     return text.str.strip()
 
 
@@ -152,6 +176,7 @@ def clean_pages(pages: pd.DataFrame, doc_dates: pd.Series) -> pd.DataFrame:
     ('junk' includes readable specifications), so use has_usable_text.
     """
     out = pages.drop(columns=["entity_links"], errors="ignore").copy()   # always '[]'
+    out = pd.concat([out, litigation_stamps(out["text"])], axis=1)      # before the stamps are removed
     out["text"] = clean_page_text(out["text"])
     out = pd.concat([out, text_quality(out["text"])], axis=1)
     # the site has no page-level dates (date_source is only "document" or "none"),
