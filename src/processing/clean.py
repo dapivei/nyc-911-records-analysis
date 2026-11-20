@@ -83,15 +83,15 @@ def parse_file_size_mb(file_size: pd.Series) -> pd.Series:
     return pd.to_numeric(parts[0], errors="coerce") * parts[1].str.upper().map(SIZE_UNITS_MB)
 
 
-def parse_pdf_links(raw: str | None) -> list[str]:
-    """JSON-encoded list string -> list of unique links (order kept)."""
+def parse_json_list(raw: str | None) -> list[str]:
+    """JSON-encoded list string ('["a", "b"]') -> list of unique values (order kept)."""
     if not isinstance(raw, str) or not raw.strip():
         return []
     try:
-        links = json.loads(raw)
+        values = json.loads(raw)
     except json.JSONDecodeError:
         return []
-    return list(dict.fromkeys(links))
+    return list(dict.fromkeys(values))
 
 
 def is_off_topic(documents: pd.DataFrame) -> pd.Series:
@@ -107,7 +107,7 @@ def clean_documents(documents: pd.DataFrame) -> pd.DataFrame:
     docs = documents.drop(columns=empty_or_constant, errors="ignore").copy()
     docs["n_pages"] = docs["n_pages"].astype("Int64")
     docs["file_size_mb"] = parse_file_size_mb(docs["file_size"])
-    docs["pdf_links"] = docs["pdf_links"].map(parse_pdf_links)
+    docs["pdf_links"] = docs["pdf_links"].map(parse_json_list)
     docs["site_date"] = clean_dates(docs["site_date"])
     docs = docs.join(correct_document_dates(docs))
     docs["in_study_window"] = in_study_window(docs["doc_date"])
@@ -160,7 +160,7 @@ def clean_pages(pages: pd.DataFrame, doc_dates: pd.Series) -> pd.DataFrame:
     out["date_source"] = out["date"].notna().map({True: "document", False: "none"})
     out["in_study_window"] = in_study_window(out["date"])
     out["contaminants"] = out["contaminants"].map(lambda c: [] if c is None else list(c))
-    out["building_bins"] = out["building_bins"].map(lambda b: [] if b is None else list(b))
+    out["building_bins"] = out["building_bins"].map(parse_json_list)
     return out
 
 
