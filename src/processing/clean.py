@@ -4,8 +4,10 @@ data/final/ is left untouched; every step here is a pure function
 (DataFrame in, DataFrame out) so it can be imported and tested on its own.
 
   documents          drop empty/constant columns, impossible dates -> NaT,
-                     file size in MB, pdf_links as a list, in_study_window flag
-  pages              same date rules; strip the portal header and Bates stamps
+                     file size in MB, pdf_links as a list; doc_date = corrected
+                     date (see dates.py; site_date kept as scraped); in_study_window flag
+  pages              date = corrected doc_date where the page date came from the
+                     document; strip the portal header and Bates stamps
                      from text; n_chars / alpha_ratio / has_usable_text flags
   buildings          numeric units, floor area and class code; in_lower_manhattan flag
   entities           entity_id / entity_name merging name variants
@@ -29,6 +31,7 @@ import pandas as pd
 import config
 from src.processing import settings
 from src.processing.agency_map import CONTRACTOR_SLUGS_THAT_ARE_AGENCIES, agency_lookup
+from src.processing.dates import correct_document_dates
 
 SOURCE, OUT = config.FINAL, settings.PROCESSED
 
@@ -106,7 +109,8 @@ def clean_documents(documents: pd.DataFrame) -> pd.DataFrame:
     docs["file_size_mb"] = parse_file_size_mb(docs["file_size"])
     docs["pdf_links"] = docs["pdf_links"].map(parse_pdf_links)
     docs["site_date"] = clean_dates(docs["site_date"])
-    docs["in_study_window"] = in_study_window(docs["site_date"])
+    docs = docs.join(correct_document_dates(docs))
+    docs["in_study_window"] = in_study_window(docs["doc_date"])
     return docs.drop(columns=["file_size"])
 
 
@@ -140,16 +144,20 @@ def text_quality(text: pd.Series) -> pd.DataFrame:
                          "word_ratio": word_ratio.round(3), "has_usable_text": usable})
 
 
-def clean_pages(pages: pd.DataFrame) -> pd.DataFrame:
+def clean_pages(pages: pd.DataFrame, doc_dates: pd.Series) -> pd.DataFrame:
     """Clean text and dates; flag pages usable for text analysis.
 
+    doc_dates maps doc_id -> corrected doc_date (see dates.py).
     The site's own ocr_status is kept, but it is not reliable on its own
     ('junk' includes readable specifications), so use has_usable_text.
     """
     out = pages.drop(columns=["entity_links"], errors="ignore").copy()   # always '[]'
     out["text"] = clean_page_text(out["text"])
     out = pd.concat([out, text_quality(out["text"])], axis=1)
-    out["date"] = clean_dates(out["date"])
+    # the site has no page-level dates (date_source is only "document" or "none"),
+    # so every page takes its document's corrected date
+    out["date"] = out["doc_id"].map(doc_dates)
+    out["date_source"] = out["date"].notna().map({True: "document", False: "none"})
     out["in_study_window"] = in_study_window(out["date"])
     out["contaminants"] = out["contaminants"].map(lambda c: [] if c is None else list(c))
     out["building_bins"] = out["building_bins"].map(lambda b: [] if b is None else list(b))
@@ -248,9 +256,10 @@ def run():
     keep = lambda table: table[~table["doc_id"].isin(removed["doc_id"])]
 
     entities = clean_entities(read("entities"))
+    clean_docs = clean_documents(documents[~off_topic])
     tables = {
-        "documents": clean_documents(documents[~off_topic]),
-        "pages": clean_pages(keep(read("pages"))),
+        "documents": clean_docs,
+        "pages": clean_pages(keep(read("pages")), clean_docs.set_index("doc_id")["doc_date"]),
         "buildings": clean_buildings(read("buildings")),
         "building_mentions": keep(read("building_mentions")),
         "entities": entities,

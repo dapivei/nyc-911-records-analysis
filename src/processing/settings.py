@@ -20,3 +20,8 @@ MIN_WORD_RATIO = 0.4                     # share of tokens that are 3+ letter wo
 # Archive boxes of unrelated DEP legal/claims files (2007 steam pipe explosion, 2014 Howard Beach
 # flood, Hurricane Irene, premises-liability requests). Their documents are dropped unless they mention the WTC.
 OFF_TOPIC_BOXES = ("DEP Box 41", "GRM 010290082 - BOX 26")
+
+# --- document date correction (dates.py) ----------------------------------------
+LATEST_VALID_DATE = "2015-12-31"       # later raw dates are OCR misreads (the archive ends ~2014)
+TITLE_YEAR_RANGE = (1985, 2015)          # years outside this in a title are not dates (addresses, IDs)
+REPEATED_DATE_MIN_DOCS = 10              # raw date in this many docs, never matching their titles -> ignored
