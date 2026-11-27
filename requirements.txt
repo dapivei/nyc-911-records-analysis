@@ -6,3 +6,8 @@ pyarrow
 duckdb
 # optional, only for step 6 (external data):
 geopandas
+# analysis (RQ1 network) and notebooks:
+networkx
+scipy
+matplotlib
+jupyter
