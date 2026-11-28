@@ -106,7 +106,15 @@ Two other list entries were dropped after a precision check, before any metric w
 
 **Rankings** (`nodes_main.csv`, fig1). DEP has the highest degree centrality (0.45, 738 partners) and betweenness (0.32). U.S. EPA is second on both, and first on strength. Next come DOHMH and NIOSH; DOB (degree) and OSHA (betweenness) complete the top 5. Several real-estate firms enter the top 20 for degree while being named on few pages: Century Realty (degree 180, 68 pages), Maiden Lane Associates and Broadway Owners LLC. 53% of real-estate nodes' pair evidence comes from multi-organization pages (more than 7 organizations), against 7% for municipal regulators (`multi_org_page_share.csv`). The 15 largest pages are a mix of building / property lists, DEP inspection-form headers and at least one Law Department letter, so page size and document type are not the same thing.
 
+![Figure 1. Top organizations by degree centrality, strength and betweenness.](../outputs/figures/network/fig1_top_centrality.png)
+
+*Figure 1. Rankings in the main extracted-organization network. Colors indicate groups; labels include pages named. Centrality describes co-occurrence in the archive, not communication or power.*
+
 **Frequency** (`frequency_check.csv`, fig3). Spearman correlation with pages named: degree 0.44, betweenness 0.56, strength 0.64. The most central agencies are also by far the most named (DEP 26,158 pages; the four advocacy groups 20–57).
+
+![Figure 3. Pages naming an organization versus its degree.](../outputs/figures/network/fig3_frequency_vs_degree.png)
+
+*Figure 3. Each point is an organization; both axes use log scales (vertical axis: degree + 1). Mention frequency and degree are positively associated. This relationship does not establish causality or control for frequency.*
 
 **Hypothesis groups** (supplement network with the 4 advocacy nodes; median percentile rank, degree / betweenness; fig2):
 
@@ -117,6 +125,10 @@ Two other list entries were dropped after a precision check, before any metric w
 | Private real estate: manual incl. uncertain | 20 | 51.5 | 95.9 / 94.9 | 93.1 / 86.3 | 95.7 / 94.8 | 95.6 / 94.4 |
 | Private real estate: hand-confirmed | 10 | 72.5 | 95.3 / 96.0 | 93.6 / 91.2 | 96.2 / 96.0 | 92.0 / 95.5 |
 | Public-health advocacy (exploratory) | 4 | 28 | 78.3 / 76.4 | 94.0 / 84.5 | 60.2 / 66.8 | 81.8 / 78.8 |
+
+![Figure 2. Hypothesis-group percentile ranks with and without multi-organization pages.](../outputs/figures/network/fig2_hypothesis_groups.png)
+
+*Figure 2. Filled points use all pages; hollow points exclude pages naming more than seven organizations. Each point is an organization; black ticks mark medians. The figure shows all and hand-confirmed real-estate views. Percentiles are recalculated within each network; advocacy comparisons remain exploratory because identification methods differ.*
 
 Raw values behind the percentiles (median degree / median betweenness ×1000):
 
@@ -134,6 +146,12 @@ Example of the percentile caveat: without multi-organization pages, the advocacy
   * All 119: above the advocacy groups on degree at baseline and in the study window, below on betweenness in both, and far below once multi-organization pages are removed.
   * Hand-confirmed 10: above the advocacy groups at baseline, in the document network and in the study window; without multi-organization pages, the median degree percentiles are close with real estate slightly lower (93.6 vs 94.0), and real estate is higher on betweenness (91.2 vs 84.5).
   * The confirmed firms are also named far more often (median 72.5 pages, vs 4 for the 99 keyword-classified firms). Classification, frequency and other firm characteristics (e.g. which firms the manual review chose to look at) are confounded here, so the data cannot say which of them drives the difference between the two views.
+
+**Network overview** (fig4). The diagram shows a selected core of the supplement network, using all agencies, the 25 companies appearing in the most documents, and the four exploratory advocacy groups as candidates. Only edges supported by at least 10 shared pages are drawn; candidates with no edge at that threshold are omitted.
+
+![Figure 4. Selected core of the organization page co-occurrence network.](../outputs/figures/network/fig4_network_subgraph.png)
+
+*Figure 4. Node size reflects pages named; edge width reflects shared pages. Squares represent agencies, circles companies, and diamonds advocacy groups. This is a filtered view of the network. Layout positions are not geographic locations, and links are not verified communication.*
 
 ## 7. Sensitivity (`robustness_summary.csv`, fig2)
 
