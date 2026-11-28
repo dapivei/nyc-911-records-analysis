@@ -1,0 +1,645 @@
+---
+theme: neversink
+title: 'After the Dust · Reading NYC’s 9/11 records as data'
+layout: cover
+color: black
+routerMode: hash
+transition: slide-left
+mdc: true
+---
+
+<div class="absolute inset-0 cover-photo" style="background-image: linear-gradient(90deg, rgba(10,10,10,.92) 0%, rgba(10,10,10,.75) 45%, rgba(10,10,10,.25) 100%), url('https://commons.wikimedia.org/wiki/Special:FilePath/FEMA_-_4235_-_Photograph_by_Andrea_Booher_taken_on_09-28-2001_in_New_York.jpg?width=1920');"></div>
+
+<div class="relative z-10">
+
+<div class="text-sm tracking-widest uppercase opacity-70 mb-2">DS-GA 1007 · Programming for Data Science · Fall 2026</div>
+
+# After the Dust
+
+<div class="text-2xl font-light mt-2 mb-8 max-w-[34rem] leading-snug">Reading New York City’s 9/11 records as data: networks, testing and the language of liability</div>
+
+**Daniela Pinto Veizaga · Beibei Xia · You Fan · Betty Cui**
+
+</div>
+
+<div class="photo-credit absolute bottom-3 left-14 z-10 text-white/70">Ground Zero, 28 Sep 2001 · Andrea Booher / FEMA · public domain</div>
+
+<!--
+0:00–0:20. Title. One sentence: "In September the City finally released its 9/11 environmental records. We turned them into data."
+Timing plan: 0–1:40 motivation · 1:40–4:45 data pipeline and code · 4:45–7:50 RQ1 network · 7:50–9:10 RQ2 and RQ3 (in progress) · 9:10–10 takeaways. Backup slides after “Thank you”.
+-->
+
+---
+layout: two-cols-title
+columns: is-5
+color: white
+---
+
+:: title ::
+
+# 8 September 2026: the City opens its 9/11 records
+
+:: left ::
+
+<div class="relative h-[355px] rounded-xl overflow-hidden photo-frame">
+<img src="https://commons.wikimedia.org/wiki/Special:FilePath/September_17_2001_Ground_Zero_04.jpg?width=1400" class="w-full h-full object-cover" alt="Aerial view of Ground Zero and damaged surrounding buildings, 17 September 2001" />
+</div>
+<div class="photo-credit mt-1">Ground Zero, 17 Sep 2001 · U.S. Navy (Eric J. Tilford) · public domain</div>
+
+:: right ::
+
+<div class="grid grid-cols-2 gap-3 mt-1">
+<div v-click class="stat">
+<div class="stat-n">~170,000</div>
+<div class="stat-l">pages on air quality, health concerns and the City’s response, in the first release</div>
+</div>
+<div v-click class="stat">
+<div class="stat-n">68 boxes</div>
+<div class="stat-l">of Department of Environmental Protection files, part of the release</div>
+</div>
+<div v-click class="stat">
+<div class="stat-n">2 lawsuits</div>
+<div class="stat-l">brought by 9/11 Health Watch, settled with the release</div>
+</div>
+<div v-click class="stat stat-warn">
+<div class="stat-n">More deaths</div>
+<div class="stat-l">from 9/11-related illnesses than on the day itself</div>
+</div>
+</div>
+
+<div v-click class="mt-4 text-[15px] leading-snug">
+Coverage focused on <b>single documents</b> (e.g. the Harding memo on possible lawsuits). We read the release <b class="text-sky-700">as data</b>.
+</div>
+
+<div class="source-line">Sources: NYC Office of the Mayor, 8 Sep 2026 · CBS News · CNN, Sep 2026</div>
+
+<!--
+0:20–1:10. Why now: the release came after years of demands from first responders and families, and the settlement of the 9/11 Health Watch lawsuits.
+Point: the news reads one memo at a time. Our questions need the whole archive.
+-->
+
+---
+layout: top-title
+color: white
+---
+
+:: title ::
+
+# Three questions no single document can answer
+
+:: content ::
+
+<div class="grid grid-cols-3 gap-4 mt-1">
+<div v-click class="rq-card border-sky-500">
+<div class="rq-tag bg-sky-600">RQ1 · Network</div>
+
+### Who held the response together?
+Which organizations connected the different parts of the response, and when did that change?
+
+<div class="rq-h"><b>H1</b> Regulators and real-estate firms are more central than advocacy groups.</div>
+<div class="status done">✓ Done</div>
+</div>
+<div v-click class="rq-card border-emerald-500">
+<div class="rq-tag bg-emerald-600">RQ2 · Spatial</div>
+
+### Where did testing go?
+Which Lower Manhattan buildings were tested, and how soon?
+
+<div class="rq-h"><b>H2</b> Commercial hubs were tested earlier than residential zones.</div>
+<div class="status wip">In progress</div>
+</div>
+<div v-click class="rq-card border-amber-500">
+<div class="rq-tag bg-amber-600">RQ3 · Language</div>
+
+### What were officials worried about?
+Did internal language about risk and liability move ahead of what the public was told?
+
+<div class="rq-h"><b>H3</b> Liability terms spike in internal memos weeks before public guidance changes.</div>
+<div class="status wip">In progress</div>
+</div>
+</div>
+
+<div v-click class="mt-5 text-center text-[16px]">Reading the archive as data also shows its <b>limits</b>: whose files were released, and who is missing from them.</div>
+
+<!--
+1:10–1:40. Read the three questions only. RQ2 and RQ3 are being finished by teammates; we show what is ready for them at the end.
+-->
+
+---
+layout: section
+color: sky
+---
+
+# 1 · From scanned pages to a dataset
+
+How we built, cleaned and checked the archive
+
+---
+layout: top-title
+color: white
+---
+
+:: title ::
+
+# One pipeline, every step documented and checked
+
+:: content ::
+
+<div class="flex items-stretch gap-2 text-[13px] mt-1">
+<div class="pipe-src">
+<div class="font-bold text-[14px] mb-1">Sources</div>
+<div>911records.org<br><span class="opacity-70">mirror: metadata, indexes</span></div>
+<div class="mt-2">City 9/11 portal<br><span class="opacity-70">one PDF per document</span></div>
+</div>
+<div class="pipe-arrow">→</div>
+<div v-click class="pipe-step border-slate-400">
+<div class="pipe-num bg-slate-600">0</div>
+<div class="font-bold text-[15px]">Ingestion</div>
+<div class="opacity-80">scrape (1 req/s, cached) · PDFs · text layer, OCR for scans</div>
+<div class="pipe-out">data/final · 7 tables</div>
+<div class="pipe-fact">64,385 docs · 230,888 pages</div>
+</div>
+<div class="pipe-arrow">→</div>
+<div v-click class="pipe-step border-sky-500">
+<div class="pipe-num bg-sky-600">1</div>
+<div class="font-bold text-[15px]">Processing</div>
+<div class="opacity-80">off-topic docs · dates · stamps · usable text · name merging</div>
+<div class="pipe-out">data/processed</div>
+<div class="pipe-fact">raw values always kept next to fixes</div>
+</div>
+<div class="pipe-arrow">→</div>
+<div v-click class="pipe-step border-amber-500 flex-[1.3]">
+<div class="pipe-num bg-amber-600">2</div>
+<div class="font-bold text-[15px]">Analyses</div>
+<div class="mt-1"><span class="pill bg-sky-100 text-sky-800">RQ1 network ✓</span></div>
+<div class="mt-1"><span class="pill bg-emerald-100 text-emerald-800">RQ2 spatial …</span></div>
+<div class="mt-1"><span class="pill bg-amber-100 text-amber-800">RQ3 language …</span></div>
+<div class="pipe-out">outputs · figures</div>
+</div>
+</div>
+
+<div v-click class="grid grid-cols-4 gap-3 mt-5 text-[13px]">
+<div class="doc-chip"><b>README</b><br>how to run it</div>
+<div class="doc-chip"><b>Report</b><br>what it found</div>
+<div class="doc-chip"><b>Notebook</b><br>walkthrough with evidence</div>
+<div class="doc-chip"><b>verify.py</b><br>toy inputs + recounts</div>
+</div>
+<div class="text-center text-[13px] mt-2 opacity-70">every step · all thresholds in <code>settings.py</code> · fixed seeds · raw data never edited</div>
+
+<!--
+1:40–2:30. Walk left to right. Emphasize: each step has the same four pieces, and each verify script checks the step against independent recounts.
+-->
+
+---
+layout: two-cols-title
+columns: is-6
+color: white
+---
+
+:: title ::
+
+# Modular code: every step is a module you can run or import
+
+:: left ::
+
+```text
+src/
+├── ingestion/    scrape_site · scrape_docs
+│                 get_pdfs · extract_text
+│                 build_tables · parsers · web
+├── processing/   clean · dates · agency_map
+└── analysis/
+    └── network/  build · metrics · nullmodel
+                  backbone · bootstrap
+                  temporal · classify
+every step: settings · figures · verify · README
+run any step: python -m src.processing.clean
+```
+
+<div class="grid grid-cols-3 gap-2 mt-3 text-center">
+<div class="num-chip"><b>30</b><br>modules</div>
+<div class="num-chip"><b>61</b><br>functions that return a typed DataFrame</div>
+<div class="num-chip"><b>100+</b><br><code>assert</code> checks</div>
+</div>
+
+:: right ::
+
+<div class="space-y-2 text-[13px] mt-1">
+<div v-click class="py-row"><b>Structure</b> one folder per step · small functions with type hints and docstrings · one <code>settings.py</code> per step</div>
+<div v-click class="py-row"><b>Text</b> compiled regular expressions (<code>re</code>) · <code>pathlib</code> · f-strings · comprehensions</div>
+<div v-click class="py-row"><b>Data</b> pandas <code>merge</code> · <code>groupby</code> · <code>explode</code> · <code>str.extract</code> · NumPy vectorization</div>
+<div v-click class="py-row"><b>Speed</b> <code>ProcessPoolExecutor</code> in parallel · <code>scipy.sparse</code> matrices · cached HTML · resumable steps · saved samples</div>
+<div v-click class="py-row"><b>Trust</b> <code>assert</code>-based checks on toy inputs and real recounts · fixed seeds (<code>np.random.default_rng</code>) · <code>with</code> blocks for files and workers</div>
+</div>
+
+<!--
+2:30–3:10. Code slide: same layout in every step; any function can be imported in a notebook (the notebooks do this); verify scripts make every number checkable.
+-->
+
+---
+layout: two-cols-title
+columns: is-4
+color: white
+---
+
+:: title ::
+
+# Our copy is complete, and it is two agencies’ files
+
+:: left ::
+
+<div class="space-y-3 mt-1">
+<div v-click class="stat-row"><span class="stat-n">64,385</span><span class="stat-l">documents, all 230,888 pages</span></div>
+<div v-click class="stat-row"><span class="stat-n">99.6%</span><span class="stat-l">of pages from the PDF’s own text; 865 read by OCR</span></div>
+<div v-click class="stat-row"><span class="stat-n">15,583</span><span class="stat-l">of 15,586 entities: our links match the site’s counts</span></div>
+<div v-click class="stat-row stat-warn-row"><span class="stat-n">52% / 74%</span><span class="stat-l">of documents are Education’s; of pages, DEP’s</span></div>
+</div>
+
+:: right ::
+
+<img src="@figures/ingestion/figI1_whose_files.png" class="fig mt-6" alt="Share of documents and pages by agency" />
+
+<div v-click class="takeaway mt-4">Every count over the archive is first a count over <b>these two agencies’ files</b>: one-page school air samples vs. long DEP files.</div>
+
+<!--
+3:10–3:40. Completeness: checked against the site's own totals. The composition matters for everything after: pages and documents give different pictures.
+-->
+
+---
+layout: top-title
+color: white
+---
+
+:: title ::
+
+# The site’s dates invent history
+
+:: content ::
+
+<img src="@figures/processing/figP1_dates.png" class="fig h-[300px] mx-auto" alt="Documents per year before and after the date correction" />
+
+<div class="grid grid-cols-3 gap-3 mt-3 text-[14px]">
+<div v-click class="mini-card"><b>The bug.</b> The site dates a document by the <i>earliest</i> date in its text: a lab-method date, a fax clock, a mention of 9/11.</div>
+<div v-click class="mini-card"><b>The fix.</b> Cross-check with the title’s month and year; drop dates repeated across documents that never match.</div>
+<div v-click class="mini-card mini-accent"><b>1994: 198 → 20 docs.</b> 6,638 dates filled in, 2,670 replaced, 1,270 flagged.</div>
+</div>
+
+<!--
+3:40–4:15. The 1994 spike is asbestos results from 2001–2003 that print a 1994 NIOSH method date on every sheet. Without this, any time series has events that never happened.
+-->
+
+---
+layout: top-title
+color: white
+---
+
+:: title ::
+
+# Cleaning that changes the answers
+
+:: content ::
+
+<div class="grid grid-cols-4 gap-3 mt-2">
+<div v-click class="clean-card">
+<div class="clean-n">78</div>
+<div class="clean-t">documents removed</div>
+<div class="clean-d">City legal files boxed with the 9/11 records: a 2007 steam-pipe explosion, Hurricane Irene. Listed, not silently dropped.</div>
+</div>
+<div v-click class="clean-card">
+<div class="clean-n">57%</div>
+<div class="clean-t">of documents carry a litigation stamp</div>
+<div class="clean-d">Removed from the text (they would dominate word counts) and kept as data: why each page was released.</div>
+</div>
+<div v-click class="clean-card">
+<div class="clean-n">65%</div>
+<div class="clean-t">of pages are usable prose</div>
+<div class="clean-d">67,305 pages the site labels “ok” fail a basic prose test. New flag: <code>has_usable_text</code>.</div>
+</div>
+<div v-click class="clean-card">
+<div class="clean-n">46 → 30</div>
+<div class="clean-t">agency names → agencies</div>
+<div class="clean-d">“DEP” = “Department of Environmental Protection”. Contractors: 6,254 names → 6,043 companies.</div>
+</div>
+</div>
+
+<img v-click src="@figures/processing/figP2_usable_text.png" class="fig h-[165px] mx-auto mt-4" alt="Site text label against usable-text flag" />
+
+<!--
+4:15–4:45. Quick. Each card is a fix that changes a downstream count: documents, words, sentiment input, network nodes.
+-->
+
+---
+layout: section
+color: amber
+---
+
+# 2 · RQ1: Who held the response together?
+
+A network of organizations named on the same pages
+
+---
+layout: two-cols-title
+columns: is-6
+color: white
+---
+
+:: title ::
+
+# A network from shared pages, and its trap
+
+:: left ::
+
+<div class="text-[15px] leading-snug space-y-3 mt-1">
+<div v-click><b>Tie</b> = two organizations named on the <b>same page</b>.<br><span class="opacity-70">1,652 organizations · 18,998 documents</span></div>
+<div v-click class="trap"><b>The trap.</b> An organization named on many pages is linked to almost everyone, whatever its role. A naive network ranks <b>paperwork</b>, not <b>position</b>.</div>
+<div v-click><b>The fix.</b> Compare each organization with <b>100 random networks</b> that keep every page count and shuffle who appears with whom.<br><span class="opacity-70">+ validated ties, consensus blocks, bootstrap, one network per month</span></div>
+<div v-click class="new-tag">New for this archive: separating <b>position</b> from <b>paperwork volume</b>, month by month.</div>
+</div>
+
+:: right ::
+
+<img src="@figures/network/fig3_frequency_vs_degree.png" class="fig mt-2" alt="Pages naming an organization against its degree" />
+<div class="caption">Organizations named on more pages tend to have more ties.</div>
+
+<!--
+4:45–5:30. This is the methodological heart: "position beyond volume" = observed centrality divided by what the random networks give for the same page count.
+-->
+
+---
+layout: two-cols-title
+columns: is-7
+color: white
+---
+
+:: title ::
+
+# The raw center is mostly paperwork
+
+:: left ::
+
+<img src="@figures/network/fig8_raw_vs_adjusted.png" class="fig h-[390px] mx-auto" alt="Raw vs volume-adjusted betweenness percentile" />
+
+:: right ::
+
+<div class="space-y-4 mt-6 text-[15px] leading-snug">
+<div v-click class="big-shift"><span class="text-sky-700">Municipal regulators</span><br><span class="shift-n">98th → 37th</span><br><span class="opacity-70 text-[13px]">percentile on betweenness, once volume is fixed</span></div>
+<div v-click>Who connects <b>beyond</b> their volume: <b>coordinators</b> (Port Authority, Mayor’s Office, FDNY), a utility and testing labs.</div>
+<div v-click class="takeaway">DEP, EPA and the Health Department top every raw ranking because <b>the record is mostly theirs</b>: 79% of pages naming an organization come from DEP’s own files.</div>
+</div>
+
+<!--
+5:30–6:15. Left = raw rank; right = rank beyond what volume predicts. Blue lines (regulators) fall; coordinators stay high.
+-->
+
+---
+layout: two-cols-title
+columns: is-8
+color: white
+---
+
+:: title ::
+
+# Many connectors in fall 2001, very few in 2002
+
+:: left ::
+
+<img src="@figures/network/fig6_monthly_relay.png" class="fig h-[400px] mx-auto" alt="Organizations connecting the response beyond their volume, by month" />
+
+:: right ::
+
+<div class="space-y-4 mt-6 text-[15px] leading-snug">
+<div v-click class="big-shift"><span class="shift-n">13 → 1–4</span><br><span class="opacity-70 text-[13px]">organizations per month connecting beyond volume, Sep 2001 → late 2002</span></div>
+<div v-click>The main break is at the <b>end of 2001</b>, found by the data, not by us: the hand-off from emergency to clean-up.</div>
+<div v-click>The Law Department moves to the center through <b>contract paperwork</b>, not litigation.</div>
+</div>
+
+<!--
+6:15–7:05. Blue = that month the organization connects more than 95% of random networks predict. Read the bold counts across the top.
+-->
+
+---
+layout: two-cols-title
+columns: is-8
+color: white
+---
+
+:: title ::
+
+# Functional blocks, and an empty seat for the public
+
+:: left ::
+
+<img src="@figures/network/fig10_backbone_blocks.png" class="fig h-[400px] mx-auto" alt="Blocks of the validated backbone" />
+
+:: right ::
+
+<div class="space-y-4 mt-6 text-[15px] leading-snug">
+<div v-click>Five blocks (owners, labs, site operations, monitoring, abatement), joined mainly through a sixth: <b>city and state public health</b>.</div>
+<div v-click class="big-shift"><span class="text-emerald-700">Advocacy groups</span><br><span class="shift-n">0 ties</span><br><span class="opacity-70 text-[13px]">beyond chance (strict test); 13–38 per city regulator</span></div>
+<div v-click class="takeaway"><b>H1:</b> the regulators’ lead is real but mostly volume; the real-estate claim is not supported; advocacy groups sit at the edge.</div>
+</div>
+
+<!--
+7:05–7:50. Ties here are only those more frequent than chance. The affected public is largely missing from the City's own record.
+-->
+
+---
+layout: section
+color: emerald
+---
+
+# 3 · In progress
+
+Spatial testing (RQ2) and the language of liability (RQ3)
+
+---
+layout: two-cols-title
+columns: is-5
+color: white
+---
+
+:: title ::
+
+# RQ2 · Where did testing go?
+
+:: left ::
+
+<div class="relative h-[330px] rounded-xl overflow-hidden photo-frame">
+<img src="https://commons.wikimedia.org/wiki/Special:FilePath/Wtc-photo.jpg?width=1400" class="w-full h-full object-cover" alt="Aerial photograph of Ground Zero and Lower Manhattan, 23 September 2001" />
+</div>
+<div class="photo-credit mt-1">Lower Manhattan, 23 Sep 2001 · NOAA · public domain</div>
+
+:: right ::
+
+<div class="rq-h mb-3"><b>H2</b> Commercial hubs show a concentration of early testing records compared with residential zones.</div>
+
+<div class="text-[14px] font-bold mb-1">Ready from the pipeline</div>
+<div class="grid grid-cols-2 gap-2 text-[13px]">
+<div class="ready">984 buildings with class, size, coordinates</div>
+<div class="ready">27,606 pages tagged with a building</div>
+<div class="ready">corrected dates, with day / month / year precision</div>
+<div class="ready warn">use page tags: <code>building_mentions</code> undercounts the most-tested buildings</div>
+</div>
+
+<div class="placeholder mt-4">
+<div class="font-bold">Results</div>
+<div class="opacity-70 text-[13px]">map of first test date by building class · commercial vs residential timing</div>
+</div>
+
+<!--
+7:50–8:30. Teammates' analysis. Replace the dashed box with the main map or result when ready.
+-->
+
+---
+layout: two-cols-title
+columns: is-7
+color: white
+---
+
+:: title ::
+
+# RQ3 · What were officials worried about?
+
+:: left ::
+
+<div class="rq-h mb-3"><b>H3</b> Internal memos show an early spike in liability and risk terms weeks before public-facing guidance adopts restrictive language.</div>
+
+<div class="text-[14px] font-bold mb-1">Ready from the pipeline</div>
+<div class="grid grid-cols-2 gap-2 text-[13px]">
+<div class="ready">150,550 usable pages, stamps removed</div>
+<div class="ready">corrected document dates for weekly series</div>
+<div class="ready">litigation stamp per page: why it was released</div>
+<div class="ready warn">no document-type label yet: memos vs. public guidance must be classified</div>
+</div>
+
+<div class="placeholder mt-4">
+<div class="font-bold">Results</div>
+<div class="opacity-70 text-[13px]">liability / risk terms per week · internal vs. public</div>
+</div>
+
+:: right ::
+
+<div class="relative h-[330px] rounded-xl overflow-hidden photo-frame">
+<img src="https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/particles.jpg" class="w-full h-full object-cover" alt="Magnified World Trade Center dust: concrete, glass fiber and chrysotile asbestos" />
+</div>
+<div class="photo-credit mt-1">WTC dust under the microscope: concrete, glass fiber, chrysotile asbestos · USGS · public domain</div>
+
+<!--
+8:30–9:10. Teammates' analysis. Asbestos and its fiber types are the most common contaminant tags in the archive (44% of pages carry a tag).
+-->
+
+---
+layout: top-title
+color: white
+---
+
+:: title ::
+
+# What the records show, and what they can’t
+
+:: content ::
+
+<div class="grid grid-cols-2 gap-5 mt-1">
+<div>
+<div class="text-[15px] font-bold text-sky-700 mb-2">What we learned</div>
+<div class="space-y-2 text-[15px] leading-snug">
+<div v-click class="learn">The archive needed <b>cleaning before counting</b>: its dates alone invent events.</div>
+<div v-click class="learn">The response was held together by <b>many organizations in fall 2001</b>, and by very few in 2002.</div>
+<div v-click class="learn">Raw centrality mostly measures <b>whose paperwork</b> was released.</div>
+</div>
+</div>
+<div>
+<div class="text-[15px] font-bold text-rose-700 mb-2">What the record can’t show</div>
+<div class="space-y-2 text-[15px] leading-snug">
+<div v-click class="limit">A shared page is <b>not</b> communication or responsibility.</div>
+<div v-click class="limit">It is mostly <b>DEP’s view</b> of the response.</div>
+<div v-click class="limit">The <b>affected public</b> is largely missing from it.</div>
+</div>
+</div>
+</div>
+
+<div v-click class="mt-5 text-center text-[17px] font-light">Recovery needs an owner as clear as the emergency, and the public needs a seat in the record.</div>
+
+<!--
+9:10–9:45. Three things we learned, three limits. End on the policy line from the network report.
+-->
+
+---
+layout: cover
+color: black
+---
+
+<div class="absolute inset-0 cover-photo" style="background-image: linear-gradient(90deg, rgba(10,10,10,.94) 0%, rgba(10,10,10,.8) 55%, rgba(10,10,10,.45) 100%), url('https://commons.wikimedia.org/wiki/Special:FilePath/Wtc-photo.jpg?width=1920');"></div>
+
+<div class="relative z-10">
+
+# Thank you
+
+<div class="text-lg font-light mt-2 mb-6">Code, data, reports and notebooks:<br><b>github.com/dapivei/nyc-911-records-analysis</b></div>
+
+<div class="text-[12px] opacity-75 max-w-[38rem] leading-relaxed">
+Photos (public domain, U.S. federal government): Andrea Booher / FEMA · U.S. Navy, Eric J. Tilford · NOAA · USGS Denver Microbeam Laboratory.<br>
+Sources: NYC Office of the Mayor, “25 Years Later, Mamdani Administration Opens City’s 9/11 Records to the Public”, 8 Sep 2026 · CBS News · CNN, Sep 2026.<br>
+Data: NYC 9/11 Document Portal and the 911records.org mirror.
+</div>
+
+</div>
+
+<!--
+9:45–10:00. Questions; backup slides follow.
+-->
+
+---
+layout: section
+color: slate
+---
+
+# Backup
+
+For questions
+
+---
+layout: two-cols-title
+columns: is-6
+color: white
+---
+
+:: title ::
+
+# Backup · How sure are we?
+
+:: left ::
+
+<img src="@figures/network/fig7_bootstrap_betweenness_ranks.png" class="fig h-[340px] mx-auto" alt="Bootstrap intervals of betweenness rank" />
+<div class="caption">100 document bootstraps: DEP (rank 1) and DOHMH (rank 3) never move.</div>
+
+:: right ::
+
+<img src="@figures/network/fig5_observed_vs_null.png" class="fig mt-6" alt="Observed vs expected centrality" />
+<div class="caption">Observed vs. expected centrality from 100 frequency-preserving null networks.</div>
+
+<div class="takeaway mt-4 text-[13px]">“Every regulator above every advocacy group”: 100% of resamples on degree, 95% on betweenness. “All real-estate firms above advocacy”: only 39%.</div>
+
+---
+layout: two-cols-title
+columns: is-6
+color: white
+---
+
+:: title ::
+
+# Backup · How do we know the data is right?
+
+:: left ::
+
+<div class="space-y-2 text-[13px]">
+<div class="py-row"><b>Ingestion</b> every document has all its pages; Bates numbers consistent; entity links equal the site’s own counts for 15,583 of 15,586 entities</div>
+<div class="py-row"><b>Processing</b> raw documents = kept + removed; dates in range; date rules tested on hand-made titles; <code>has_usable_text</code> recomputed from settings</div>
+<div class="py-row"><b>Network</b> metrics on toy graphs with hand-computed answers; edge weights recounted from raw mentions; null model keeps both degree sequences</div>
+<div class="py-row warn-row"><b>Known issues, written down</b> 234 ID-only documents; lost change type; <code>building_mentions</code> undercount</div>
+</div>
+
+:: right ::
+
+<img src="@figures/network/fig9_whose_files.png" class="fig h-[350px] mx-auto" alt="Share of each organization's pages from DEP's own files" />
+<div class="caption">79% of pages naming an organization come from DEP’s files; coordinators are named across agencies.</div>

@@ -1,0 +1,20 @@
+{
+  "name": "after-the-dust-slides",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "slidev",
+    "build": "slidev build",
+    "export": "slidev export"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@slidev/cli": "^53.1.0",
+    "@slidev/theme-default": "^0.25.0",
+    "slidev-theme-neversink": "^0.4.1",
+    "vue": "^3.5.45"
+  }
+}
