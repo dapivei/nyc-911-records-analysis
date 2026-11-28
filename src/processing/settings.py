@@ -16,6 +16,11 @@ MIN_USABLE_CHARS = 100                   # cleaned page text shorter than this i
 MIN_ALPHA_RATIO = 0.5                    # share of letters among non-space characters (excludes numeric lab printouts)
 MIN_WORD_RATIO = 0.4                     # share of tokens that are 3+ letter words (excludes scattered OCR characters)
 
+# --- buildings -------------------------------------------------------------------
+# Study area for in_lower_manhattan (RQ2). Kept here since the cleaning step is its only user
+# (it used to live in the root config.py).
+LOWER_MANHATTAN_BBOX = (-74.03, 40.695, -73.97, 40.73)   # lon_min, lat_min, lon_max, lat_max
+
 # --- off-topic documents -------------------------------------------------------
 # Archive boxes of unrelated DEP legal/claims files (2007 steam pipe explosion, 2014 Howard Beach
 # flood, Hurricane Irene, premises-liability requests). Their documents are dropped unless they mention the WTC.

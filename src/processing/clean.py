@@ -205,7 +205,7 @@ def clean_buildings(buildings: pd.DataFrame) -> pd.DataFrame:
     out["floors"] = out["floors"].astype("Int64")
     for col in ("first_date", "last_date"):
         out[col] = clean_dates(out[col])
-    lon_min, lat_min, lon_max, lat_max = config.LOWER_MANHATTAN_BBOX
+    lon_min, lat_min, lon_max, lat_max = settings.LOWER_MANHATTAN_BBOX
     out["in_lower_manhattan"] = out["lon"].between(lon_min, lon_max) & out["lat"].between(lat_min, lat_max)
     return out.drop(columns=["units", "building_area"])
 
