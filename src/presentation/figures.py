@@ -7,10 +7,9 @@ many labels, small type, long footnotes. Shown on a slide, their text is too sma
 room. These versions keep only what each slide says and use type about twice as large. They reuse
 the data and helpers of each step, so they always match the reports.
 
-Writes outputs/figures/slides/*.png, used by slides.md as @figures/slides/<name>.png, and
-outputs/figures/slides/*.json, the data behind the interactive plots in components/*.vue.
+Writes outputs/figures/slides/*.png, used by slides.md as @figures/slides/<name>.png.
+The data behind the interactive plots (components/*.vue) is written by src/presentation/data.py.
 """
-import json
 from pathlib import Path
 
 import matplotlib
@@ -22,7 +21,6 @@ import pandas as pd  # noqa: E402
 
 import config  # noqa: E402
 from src.analysis.network import settings as net_settings  # noqa: E402
-from src.analysis.network.figures import SHORT  # noqa: E402
 from src.ingestion import verify as ingestion_verify  # noqa: E402
 from src.processing import settings as proc_settings  # noqa: E402
 
@@ -193,58 +191,6 @@ def connectors_per_month(tm: pd.DataFrame, phases: list[tuple[str, str, str]]):
     return _save(fig, "s_connectors_per_month.png")
 
 
-# --- data for the interactive plots (components/*.vue) ---------------------------------------
-
-GROUP_KIND = {"municipal_regulatory": "City regulators", "city_other": "Other city agencies",
-              "state_federal_regional": "State & federal", "private_real_estate": "Real estate",
-              "public_health_advocacy": "Advocacy groups"}          # everything else: "Companies & others"
-
-
-def _kind(group: str) -> str:
-    return GROUP_KIND.get(group, "Companies & others")
-
-
-def _label(name: str) -> str:
-    return SHORT.get(name, name)
-
-
-def connectors_data(tm: pd.DataFrame, nodes: pd.DataFrame) -> list[dict]:
-    """Per month: how many organizations connected beyond their volume, and which ones."""
-    months = pd.period_range(net_settings.TEMPORAL_START, net_settings.TEMPORAL_END, freq="M")
-    sig = tm[(tm["pages"] >= MIN_PAGES) & (tm["null_q_betweenness"] >= Q) & (tm["ratio_betweenness"] > 1)]
-    sig = sig.merge(nodes[["node_id", "name", "group"]], on="node_id", how="left")
-    out = []
-    for m in months:
-        rows = sig[sig["month"] == str(m)].sort_values("ratio_betweenness", ascending=False)
-        out.append({"month": str(m), "label": m.strftime("%b %Y"), "count": len(rows),
-                    "orgs": [{"name": _label(r.name), "kind": _kind(r.group), "ratio": round(r.ratio_betweenness, 1),
-                              "pages": int(r.pages)} for r in rows.itertuples()]})
-    return out
-
-
-def beyond_volume_data(cmp: pd.DataFrame) -> list[dict]:
-    """Every organization named on >= MIN_PAGES pages: raw vs beyond-volume betweenness percentile."""
-    pop = cmp[(cmp["n_pages"] >= MIN_PAGES) & cmp["ratio_betweenness"].notna() & (cmp["betweenness"] > 0)].copy()
-    pop["raw"] = pop["betweenness"].rank(pct=True) * 100
-    pop["adj"] = pop["ratio_betweenness"].rank(pct=True) * 100
-    return [{"name": _label(r.name), "kind": _kind(r.group), "raw": round(r.raw, 1), "adj": round(r.adj, 1),
-             "ratio": round(r.ratio_betweenness, 2), "pages": int(r.n_pages)} for r in pop.itertuples()]
-
-
-def pages_ties_data(nodes: pd.DataFrame) -> list[dict]:
-    """Every organization of the main network: pages naming it and organizations it is tied to."""
-    d = nodes[nodes["degree"] > 0]
-    return [{"name": _label(r.name), "kind": _kind(r.group), "pages": int(r.n_pages), "ties": int(r.degree)}
-            for r in d.itertuples()]
-
-
-def write_json(data, name: str) -> Path:
-    FIGURES.mkdir(parents=True, exist_ok=True)
-    path = FIGURES / name
-    path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
-    return path
-
-
 def main():
     F, P = config.FINAL, proc_settings.PROCESSED
     raw_docs = pd.read_parquet(F / "documents.parquet", columns=["doc_id", "agency", "n_pages", "bates_start"])
@@ -258,9 +204,6 @@ def main():
     phases = [("2001-09", "2001-09", "first weeks"), ("2001-10", "2001-11", "fall 2001"),
               ("2001-12", "2002-12", "clean-up and testing")]    # the 3 data-driven phases (fig 6)
     print(connectors_per_month(tm, phases))
-    print(write_json(connectors_data(tm, nodes), "connectors_by_month.json"))
-    print(write_json(beyond_volume_data(cmp), "beyond_volume.json"))
-    print(write_json(pages_ties_data(nodes), "pages_vs_ties.json"))
 
 
 if __name__ == "__main__":

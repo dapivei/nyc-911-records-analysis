@@ -26,7 +26,7 @@ mdc: true
 
 <!--
 0:00–0:20. Title. One sentence: "In September the City finally released its 9/11 environmental records. We turned them into data."
-Timing plan: 0–1:40 motivation · 1:40–4:45 data pipeline and code · 4:45–7:50 RQ1 network · 7:50–9:10 RQ2 and RQ3 (in progress) · 9:10–10 takeaways. Backup slides after “Thank you”.
+Timing plan: 0–1:40 motivation · 1:40–5:05 pipeline, code and cleaning · 5:05–7:50 RQ1 network · 7:50–9:10 RQ2 and RQ3 (in progress) · 9:10–10 takeaways. Backup slides after “Thank you”.
 -->
 
 ---
@@ -141,53 +141,16 @@ color: white
 
 :: title ::
 
-# One pipeline, every step documented and checked
+# One pipeline, from scraped pages to answers
 
 :: content ::
 
-<div class="flex items-stretch gap-2 text-[13px] mt-1">
-<div class="pipe-src">
-<div class="font-bold text-[14px] mb-1">Sources</div>
-<div>911records.org<br><span class="opacity-70">mirror: metadata, indexes</span></div>
-<div class="mt-2">City 9/11 portal<br><span class="opacity-70">one PDF per document</span></div>
-</div>
-<div class="pipe-arrow">→</div>
-<div v-click class="pipe-step border-slate-400">
-<div class="pipe-num bg-slate-600">0</div>
-<div class="font-bold text-[15px]">Ingestion</div>
-<div class="opacity-80">scrape (1 req/s, cached) · PDFs · text layer, OCR for scans</div>
-<div class="pipe-out">data/final · 7 tables</div>
-<div class="pipe-fact">64,385 docs · 230,888 pages</div>
-</div>
-<div class="pipe-arrow">→</div>
-<div v-click class="pipe-step border-sky-500">
-<div class="pipe-num bg-sky-600">1</div>
-<div class="font-bold text-[15px]">Processing</div>
-<div class="opacity-80">off-topic docs · dates · stamps · usable text · name merging</div>
-<div class="pipe-out">data/processed</div>
-<div class="pipe-fact">raw values always kept next to fixes</div>
-</div>
-<div class="pipe-arrow">→</div>
-<div v-click class="pipe-step border-amber-500 flex-[1.3]">
-<div class="pipe-num bg-amber-600">2</div>
-<div class="font-bold text-[15px]">Analyses</div>
-<div class="mt-1"><span class="pill bg-sky-100 text-sky-800">RQ1 network ✓</span></div>
-<div class="mt-1"><span class="pill bg-emerald-100 text-emerald-800">RQ2 spatial …</span></div>
-<div class="mt-1"><span class="pill bg-amber-100 text-amber-800">RQ3 language …</span></div>
-<div class="pipe-out">outputs · figures</div>
-</div>
-</div>
+<PipelineExplorer />
 
-<div v-click class="grid grid-cols-4 gap-3 mt-5 text-[13px]">
-<div class="doc-chip"><b>README</b><br>how to run it</div>
-<div class="doc-chip"><b>Report</b><br>what it found</div>
-<div class="doc-chip"><b>Notebook</b><br>walkthrough with evidence</div>
-<div class="doc-chip"><b>verify.py</b><br>toy inputs + recounts</div>
-</div>
-<div class="text-center text-[13px] mt-2 opacity-70">every step · all thresholds in <code>settings.py</code> · fixed seeds · raw data never edited</div>
+<div class="text-center text-[12.5px] mt-2 opacity-75">every step ships with a <b>README</b> (how to run it) · a <b>report</b> (what it found) · a <b>notebook</b> (walkthrough) · a <b>verify.py</b> (checks)</div>
 
 <!--
-1:40–2:30. Walk left to right. Emphasize: each step has the same four pieces, and each verify script checks the step against independent recounts.
+1:40–2:40. Interactive: hover the stages left to right; stop on Scrape (polite, cached, resumable), Text (99.6% from the PDFs’ own text) and Checks (counts match the site’s own totals).
 -->
 
 ---
@@ -202,25 +165,7 @@ color: white
 
 :: left ::
 
-```text
-src/
-├── ingestion/    scrape_site · scrape_docs
-│                 get_pdfs · extract_text
-│                 build_tables · parsers · web
-├── processing/   clean · dates · agency_map
-└── analysis/
-    └── network/  build · metrics · nullmodel
-                  backbone · bootstrap
-                  temporal · classify
-every step: settings · figures · verify · README
-run any step: python -m src.processing.clean
-```
-
-<div class="grid grid-cols-3 gap-2 mt-3 text-center">
-<div class="num-chip"><b>30</b><br>modules</div>
-<div class="num-chip"><b>61</b><br>functions that return a typed DataFrame</div>
-<div class="num-chip"><b>100+</b><br><code>assert</code> checks</div>
-</div>
+<CodeMap class="mt-1" />
 
 :: right ::
 
@@ -233,7 +178,7 @@ run any step: python -m src.processing.clean
 </div>
 
 <!--
-2:30–3:10. Code slide: same layout in every step; any function can be imported in a notebook (the notebooks do this); verify scripts make every number checkable.
+2:40–3:15. Code slide: hover a bar to list its modules. Same layout in every step; any function can be imported in a notebook (the notebooks do this); verify scripts make every number checkable.
 -->
 
 ---
@@ -262,7 +207,7 @@ color: white
 <div v-click class="takeaway mt-4">Every count over the archive is first a count over <b>these two agencies’ files</b>: one-page school air samples vs. long DEP files.</div>
 
 <!--
-3:10–3:40. Completeness: checked against the site's own totals. The composition matters for everything after: pages and documents give different pictures.
+3:15–3:40. Completeness: checked against the site's own totals. The composition matters for everything after: pages and documents give different pictures.
 -->
 
 ---
@@ -295,36 +240,14 @@ color: white
 
 :: title ::
 
-# Cleaning that changes the answers
+# Cleaning, step by step: what we fixed and why
 
 :: content ::
 
-<div class="grid grid-cols-4 gap-3 mt-2">
-<div v-click class="clean-card">
-<div class="clean-n">78</div>
-<div class="clean-t">documents removed</div>
-<div class="clean-d">City legal files boxed with the 9/11 records: a 2007 steam-pipe explosion, Hurricane Irene. Listed, not silently dropped.</div>
-</div>
-<div v-click class="clean-card">
-<div class="clean-n">57%</div>
-<div class="clean-t">of documents carry a litigation stamp</div>
-<div class="clean-d">Removed from the text (they would dominate word counts) and kept as data: why each page was released.</div>
-</div>
-<div v-click class="clean-card">
-<div class="clean-n">65%</div>
-<div class="clean-t">of pages are usable prose</div>
-<div class="clean-d">67,305 pages the site labels “ok” fail a basic prose test. New flag: <code>has_usable_text</code>.</div>
-</div>
-<div v-click class="clean-card">
-<div class="clean-n">46 → 30</div>
-<div class="clean-t">agency names → agencies</div>
-<div class="clean-d">“DEP” = “Department of Environmental Protection”. Contractors: 6,254 names → 6,043 companies.</div>
-</div>
-</div>
-
+<CleaningExplorer />
 
 <!--
-4:15–4:45. Quick. Each card is a fix that changes a downstream count: documents, words, sentiment input, network nodes.
+4:15–5:05. Interactive, one tab per fix (the date fix was the slide before). Page text: stamps removed from the text, kept as data. Usable text: move the words slider to show why 40%. Then Names, and Off-topic if time allows.
 -->
 
 ---
@@ -361,7 +284,7 @@ color: white
 <div class="caption">Organizations named on more pages tend to have more ties (Spearman ρ = 0.44).</div>
 
 <!--
-4:45–5:30. This is the methodological heart: "position beyond volume" = observed centrality divided by what the random networks give for the same page count.
+5:05–5:45. This is the methodological heart: "position beyond volume" = observed centrality divided by what the random networks give for the same page count.
 -->
 
 ---
@@ -383,7 +306,7 @@ color: white
 </div>
 
 <!--
-5:30–6:15. Left = raw rank; right = rank beyond what volume predicts. Blue lines (regulators) fall; coordinators stay high.
+5:45–6:25. Interactive: hover a line for one organization; the chips switch groups on and off; the search box answers “where is X?”. Blue lines (regulators) fall; coordinators stay high.
 -->
 
 ---
@@ -406,7 +329,7 @@ color: white
 </div>
 
 <!--
-6:15–7:05. Interactive: hover a month to list the organizations; click Sep 2001, then Dec 2002. A month counts an organization when it is named on 20+ pages and beats 95% of that month’s random networks.
+6:25–7:10. Interactive: hover a month to list the organizations; click Sep 2001, then Dec 2002. A month counts an organization when it is named on 20+ pages and beats 95% of that month’s random networks.
 -->
 
 ---
@@ -443,7 +366,7 @@ color: white
 </div>
 
 <!--
-7:05–7:50. Ties here are only those more frequent than chance. The affected public is largely missing from the City's own record.
+7:10–7:50. Ties here are only those more frequent than chance. The affected public is largely missing from the City's own record.
 -->
 
 ---
