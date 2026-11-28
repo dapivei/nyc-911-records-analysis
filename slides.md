@@ -257,7 +257,7 @@ color: white
 
 :: right ::
 
-<img src="@figures/ingestion/figI1_whose_files.png" class="fig mt-6" alt="Share of documents and pages by agency" />
+<img src="@figures/slides/s_whose_files.png" class="fig mt-4 w-full" alt="Share of documents and pages by agency" />
 
 <div v-click class="takeaway mt-4">Every count over the archive is first a count over <b>these two agencies’ files</b>: one-page school air samples vs. long DEP files.</div>
 
@@ -276,7 +276,7 @@ color: white
 
 :: content ::
 
-<img src="@figures/processing/figP1_dates.png" class="fig h-[300px] mx-auto" alt="Documents per year before and after the date correction" />
+<img src="@figures/slides/s_dates_per_year.png" class="fig h-[285px] mx-auto" alt="Documents per year before and after the date correction" />
 
 <div class="grid grid-cols-3 gap-3 mt-3 text-[14px]">
 <div v-click class="mini-card"><b>The bug.</b> The site dates a document by the <i>earliest</i> date in its text: a lab-method date, a fax clock, a mention of 9/11.</div>
@@ -322,7 +322,6 @@ color: white
 </div>
 </div>
 
-<img v-click src="@figures/processing/figP2_usable_text.png" class="fig h-[165px] mx-auto mt-4" alt="Site text label against usable-text flag" />
 
 <!--
 4:15–4:45. Quick. Each card is a fix that changes a downstream count: documents, words, sentiment input, network nodes.
@@ -339,7 +338,7 @@ A network of organizations named on the same pages
 
 ---
 layout: two-cols-title
-columns: is-6
+columns: is-5
 color: white
 ---
 
@@ -358,16 +357,15 @@ color: white
 
 :: right ::
 
-<img src="@figures/network/fig3_frequency_vs_degree.png" class="fig mt-2" alt="Pages naming an organization against its degree" />
-<div class="caption">Organizations named on more pages tend to have more ties.</div>
+<PagesVsTies class="mt-1" />
+<div class="caption">Organizations named on more pages tend to have more ties (Spearman ρ = 0.44).</div>
 
 <!--
 4:45–5:30. This is the methodological heart: "position beyond volume" = observed centrality divided by what the random networks give for the same page count.
 -->
 
 ---
-layout: two-cols-title
-columns: is-7
+layout: top-title
 color: white
 ---
 
@@ -375,16 +373,13 @@ color: white
 
 # The raw center is mostly paperwork
 
-:: left ::
+:: content ::
 
-<img src="@figures/network/fig8_raw_vs_adjusted.png" class="fig h-[390px] mx-auto" alt="Raw vs volume-adjusted betweenness percentile" />
+<BeyondVolume />
 
-:: right ::
-
-<div class="space-y-4 mt-6 text-[15px] leading-snug">
-<div v-click class="big-shift"><span class="text-sky-700">Municipal regulators</span><br><span class="shift-n">98th → 37th</span><br><span class="opacity-70 text-[13px]">percentile on betweenness, once volume is fixed</span></div>
-<div v-click>Who connects <b>beyond</b> their volume: <b>coordinators</b> (Port Authority, Mayor’s Office, FDNY), a utility and testing labs.</div>
-<div v-click class="takeaway">DEP, EPA and the Health Department top every raw ranking because <b>the record is mostly theirs</b>: 79% of pages naming an organization come from DEP’s own files.</div>
+<div class="grid grid-cols-2 gap-3 mt-1 text-[14px] leading-snug">
+<div v-click class="mini-card mini-accent"><b>City regulators 98 → 37</b> (median percentile) once volume is fixed. DEP, EPA and the Health Department top the raw ranking because <b>the record is mostly theirs</b>: 79% of pages naming an organization come from DEP’s files.</div>
+<div v-click class="mini-card">Who connects <b>beyond</b> their volume: <b>coordinators</b> (Port Authority, Mayor’s Office, FDNY), a utility and testing labs.</div>
 </div>
 
 <!--
@@ -392,8 +387,7 @@ color: white
 -->
 
 ---
-layout: two-cols-title
-columns: is-8
+layout: top-title
 color: white
 ---
 
@@ -401,20 +395,18 @@ color: white
 
 # Many connectors in fall 2001, very few in 2002
 
-:: left ::
+:: content ::
 
-<img src="@figures/network/fig6_monthly_relay.png" class="fig h-[400px] mx-auto" alt="Organizations connecting the response beyond their volume, by month" />
+<ConnectorsByMonth class="mx-auto" />
 
-:: right ::
-
-<div class="space-y-4 mt-6 text-[15px] leading-snug">
-<div v-click class="big-shift"><span class="shift-n">13 → 1–4</span><br><span class="opacity-70 text-[13px]">organizations per month connecting beyond volume, Sep 2001 → late 2002</span></div>
-<div v-click>The main break is at the <b>end of 2001</b>, found by the data, not by us: the hand-off from emergency to clean-up.</div>
-<div v-click>The Law Department moves to the center through <b>contract paperwork</b>, not litigation.</div>
+<div class="grid grid-cols-3 gap-3 mt-2 text-[14px] leading-snug">
+<div v-click class="mini-card mini-accent"><b>13 → 1</b> organizations a month connecting the response beyond their paperwork volume, Sep 2001 → Dec 2002.</div>
+<div v-click class="mini-card">The main break, at the <b>end of 2001</b>, is found by the data, not by us: the hand-off from emergency to clean-up.</div>
+<div v-click class="mini-card">The Law Department moves toward the center through <b>contract paperwork</b>, not litigation.</div>
 </div>
 
 <!--
-6:15–7:05. Blue = that month the organization connects more than 95% of random networks predict. Read the bold counts across the top.
+6:15–7:05. Interactive: hover a month to list the organizations; click Sep 2001, then Dec 2002. A month counts an organization when it is named on 20+ pages and beats 95% of that month’s random networks.
 -->
 
 ---
@@ -429,12 +421,23 @@ color: white
 
 :: left ::
 
-<img src="@figures/network/fig10_backbone_blocks.png" class="fig h-[400px] mx-auto" alt="Blocks of the validated backbone" />
+<div class="grid grid-cols-3 gap-2 text-[12.5px] leading-tight mt-1">
+<div class="blk"><b>Air monitoring</b><br>NIOSH, OSHA<div class="blk-n">49 orgs · 7 ties to hub</div></div>
+<div class="blk"><b>EPA + sampling labs</b><br>EPA, FEMA, labs<div class="blk-n">56 orgs · 21 ties to hub</div></div>
+<div class="blk"><b>Asbestos abatement</b><br>removal contractors<div class="blk-n">25 orgs · 13 ties to hub</div></div>
+<div class="blk"><b>Building owners</b><br>exterior clean-up program<div class="blk-n">199 orgs · 20 ties to hub</div></div>
+<div class="blk blk-hub"><b>City / state public health</b><br>DEP, Health Dept., Buildings, NYS Health<div class="blk-n">hub: 70 of 114 ties between blocks</div></div>
+<div class="blk"><b>WTC site operations</b><br>OEM, Mayor, DCAS, FDNY<div class="blk-n">48 orgs · 9 ties to hub</div></div>
+<div></div>
+<div class="blk blk-adv"><b>Advocacy groups</b><br>9/11 Env. Action, NRDC, Am. Lung Assn., NYCOSH<div class="blk-n">0 ties beyond chance</div></div>
+<div></div>
+</div>
+<div class="caption mt-1">Blocks of the validated network: ties kept only if more frequent than chance; 100 consensus runs.</div>
 
 :: right ::
 
 <div class="space-y-4 mt-6 text-[15px] leading-snug">
-<div v-click>Five blocks (owners, labs, site operations, monitoring, abatement), joined mainly through a sixth: <b>city and state public health</b>.</div>
+<div v-click>Five working blocks, joined mainly through a sixth: <b>city and state public health</b>.</div>
 <div v-click class="big-shift"><span class="text-emerald-700">Advocacy groups</span><br><span class="shift-n">0 ties</span><br><span class="opacity-70 text-[13px]">beyond chance (strict test); 13–38 per city regulator</span></div>
 <div v-click class="takeaway"><b>H1:</b> the regulators’ lead is real but mostly volume; the real-estate claim is not supported; advocacy groups sit at the edge.</div>
 </div>
