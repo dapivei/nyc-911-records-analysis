@@ -1,4 +1,4 @@
-"""Figures for the processing report (docs/processing_report.md), static PNG.
+"""Figures for the processing report (docs/01.processing_report.md), static PNG.
 
     python -m src.processing.figures      # after python -m src.processing.clean
 

@@ -12,7 +12,7 @@ The analysis has two layers:
    * a document bootstrap;
    * one network per month.
 
-Results and their interpretation are in [`docs/network_analysis_report.md`](../../../docs/network_analysis_report.md). The step-by-step walkthrough is [`notebooks/network_centrality.ipynb`](../../../notebooks/network_centrality.ipynb).
+Results and their interpretation are in [`docs/02.network_analysis_report.md`](../../../docs/02.network_analysis_report.md). The step-by-step walkthrough is [`notebooks/02.network_centrality.ipynb`](../../../notebooks/02.network_centrality.ipynb).
 
 ## How to run
 
@@ -178,8 +178,8 @@ Groups and thresholds were fixed before results were computed. If you change one
 ## Full pipeline at a glance
 
 ```
-scrape_site → scrape_docs → get_pdfs → extract_text → build_tables   (src/ingestion → data/final/)
-          → clean                                                    (src/processing → data/processed/)
-          → run → verify                                             (src/analysis/network → outputs/network/, outputs/figures/network/)
-          → notebooks/network_centrality.ipynb, docs/network_analysis_report.md
+scrape_site → scrape_docs → get_pdfs → extract_text → build_tables → verify → figures   (src/ingestion → data/final/)
+          → clean → verify → figures                                                    (src/processing → data/processed/)
+          → run → verify                                                                (src/analysis/network → outputs/network/, outputs/figures/network/)
 ```
+Walkthroughs: `notebooks/00.data_ingestion.ipynb`, `01.process_pipeline.ipynb`, `02.network_centrality.ipynb`. Results: `docs/00.ingestion_report.md`, `01.processing_report.md`, `02.network_analysis_report.md`.

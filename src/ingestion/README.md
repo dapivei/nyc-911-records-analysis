@@ -1,10 +1,22 @@
 # Ingestion: from 911records.org to `data/final/`
 
-This step builds the raw archive as a set of joinable tables. It collects the indexes that 911records.org has already built (entities, buildings, the browse tree, catalog changes), the metadata for every document page, one PDF per document, and the text of every page. Then it combines them into Parquet tables in `data/final/`.
+This step builds the raw archive as a set of joinable tables. It collects the indexes that 911records.org has already built (entities, buildings, the browse tree, catalog changes), the metadata of every document page, one PDF per document, and the text of every page, and combines them into Parquet tables in `data/final/`.
 
 The output is a faithful copy of the sources. Nothing is corrected or interpreted here; that happens in [`src/processing`](../processing/README.md).
 
+What the archive contains, how complete our copy is, the known issues and the data dictionary are in [`docs/00.ingestion_report.md`](../../docs/00.ingestion_report.md). The walkthrough is [`notebooks/00.data_ingestion.ipynb`](../../notebooks/00.data_ingestion.ipynb).
+
 ## How to run
+
+**Most people only need the committed tables:**
+
+```bash
+git lfs pull                          # data/final/*.parquet (about 180 MB)
+python -m src.ingestion.verify        # checks; ends with "all checks passed (known issues listed above)"
+python -m src.ingestion.figures       # figures for the report, in outputs/figures/ingestion/
+```
+
+**Re-running the scrape** (hours: one request per second):
 
 ```bash
 # system tools for text extraction
@@ -18,9 +30,10 @@ python -m src.ingestion.scrape_docs          # or: ... scrape_docs 500   (random
 python -m src.ingestion.get_pdfs             # or: ... get_pdfs zips-only
 python -m src.ingestion.extract_text
 python -m src.ingestion.build_tables
+python -m src.ingestion.verify
 ```
 
-Each step prints its progress and reads the output of the steps before it. Every step is resumable: stop it at any time and re-run it to continue where it left off. All settings live in the root [`config.py`](../../config.py). Edit that file, not the step scripts.
+Each step prints its progress and reads the output of the steps before it. Every step is resumable: stop it and re-run it to continue where it left off. All settings live in the root [`config.py`](../../config.py); edit that file, not the step scripts.
 
 Before a full scrape, check the parsers on a few cached pages (for example, `parsers.parse_doc_page(html, url)`). If a field comes back empty, adjust `parsers.py` and re-run. Pages are cached, so a re-run costs no new requests.
 
@@ -28,96 +41,127 @@ Before a full scrape, check the parsers on a few cached pages (for example, `par
 
 | File | Role |
 | --- | --- |
-| `scrape_site.py` | Step 1: scrapes the site's indexes (entities, buildings, browse tree, changes, contradictions) |
-| `scrape_docs.py` | Step 2: scrapes the metadata of every document page; `all_doc_ids()` is the master ID list |
+| `scrape_site.py` | Step 1: the site's indexes (entities, buildings, browse tree, changes, contradictions) |
+| `scrape_docs.py` | Step 2: the metadata of every document page; `all_doc_ids()` is the master ID list |
 | `get_pdfs.py` | Step 3: unzips bulk ZIPs and downloads missing PDFs from the City portal |
 | `extract_text.py` | Step 4: page text through pdftotext, then Tesseract OCR, then the site as a fallback |
 | `build_tables.py` | Step 5: merges the interim outputs into `data/final/` |
 | `web.py` | Polite fetching: rate limit, `robots.txt`, retries, HTML cache |
 | `parsers.py` | HTML → dict parsers for every page type (no downloading) |
 | `files.py` | Append-as-you-go `.jsonl` and `*_done.txt` helpers that make steps resumable |
+| `verify.py` | Checks on `data/final/`: keys, completeness, joins, counts against the site's own totals, known issues |
+| `figures.py` | Figures I1–I2 for the report (static PNG) |
 
 ## Data sources
-
-There are two sources, and each is read differently.
 
 **1. [911records.org](https://911records.org) (independent mirror): scraped HTML.** The site has no public API, so `web.py` downloads the pages and `parsers.py` parses them with BeautifulSoup. Each parser tries several strategies per field (`<dl>`, `<table>`, `Label: value`, meta tags), so a small markup change does not silently empty a column.
 
 | Page | What we get | Step |
 | --- | --- | --- |
-| `/entities/{type}` and `/entity/{type}/{slug}` | Agencies, labs, contractors, substances, addresses and signatories, plus every document page each one appears on | 1 |
+| `/entities/{type}` and `/entity/{type}/{slug}` | Agencies, labs, contractors, substances, addresses and signatories, and every page each one appears on | 1 |
 | `/map` and `/building/{bin}` | Mapped buildings (BIN, class, floors, coordinates) and the pages that mention them | 1 |
-| `/browse` | The archive tree (collections → boxes → documents), which gives every document ID | 1 |
-| `/changes` and `/changes/{date}` | Which documents the City added or removed, by capture date | 1 |
+| `/browse` | The archive tree (collections → boxes → documents), which gives document IDs | 1 |
+| `/changes` and `/changes/{date}` | Which documents the City added, changed or removed, by capture date | 1 |
 | `/contradictions` | The site's curated contradiction examples | 1 |
-| `/doc/{id}` and `/doc/{id}/p/{n}` | Each page's metadata: agency, box and folder, Bates range, title, dates, contaminants, OCR status | 2 |
-| `/doc/{id}/p/{n}` (fallback only) | Text for a page that is still empty after pdftotext and OCR | 4 |
+| `/doc/{id}` and `/doc/{id}/p/{n}` | Each page's metadata: agency, box and folder, Bates range, title, dates, contaminants, OCR status, building links | 2 |
+| `/doc/{id}/p/{n}` (fallback only) | Text for a page still empty after pdftotext and OCR | 4 |
 
-**2. [NYC 9/11 Document Portal](https://sept11documents.cityofnewyork.us) (official City copy): PDF downloads.** The City portal is the authoritative copy and is used only to download one PDF per document (`config.CITY_PDF_URL`).
+**2. [NYC 9/11 Document Portal](https://sept11documents.cityofnewyork.us) (official City copy): PDF downloads**, one per document (`config.CITY_PDF_URL`).
 
-**How we fetch (`web.py`).** The fetcher follows these rules:
-- **Rate limit:** one request per second per host.
-- **Rules:** `robots.txt` is checked before each fetch.
-- **Identification:** requests carry an identifiable `USER_AGENT`.
-- **Errors:** retries with exponential backoff, and `Retry-After` is honored on 429 and 5xx responses.
-- **Cache:** every HTML page is saved gzipped in `data/raw/html/`, keyed by the SHA-1 of its URL, so nothing is fetched twice.
-- **Human checks:** if the site shows one (Turnstile), the code raises an error and stops instead of trying to get around it.
+**How we fetch (`web.py`):** one request per second per host; `robots.txt` checked before each fetch; an identifiable `USER_AGENT`; retries with exponential backoff, honoring `Retry-After` on 429 and 5xx; every HTML page cached gzipped in `data/raw/html/` (keyed by the SHA-1 of its URL), so nothing is fetched twice. If the site shows a human check (Turnstile), the code stops instead of trying to get around it.
 
 ## What the pipeline does, in order
 
 ### 1. Scrape the site's indexes: `scrape_site.py`
 Five functions each walk one part of the site and write to `data/interim/`:
-- `scrape_entities()` follows the `/entities/{type}` listings, including pagination, and then each entity's page at 50 records per page. It writes `entities.parquet` and `entity_mentions.jsonl` (entity × doc × page), and is resumable through `entity_done.txt`.
-- `scrape_buildings()` reads every BIN from `/map`, then each `/building/{bin}` page. It writes `buildings.parquet` and `building_mentions.parquet` (bin × doc × page).
-- `scrape_browse()` does a breadth-first walk over `/browse` → collections → boxes and writes `browse_docs.parquet`.
-- `scrape_changes()` writes `catalog_changes.parquet`.
-- `scrape_contradictions()` writes `contradictions.parquet`.
+* `scrape_entities()`: the `/entities/{type}` listings (with pagination), then each entity's page, 50 records per page → `entities.parquet`, `entity_mentions.jsonl` (entity × doc × page). Resumable through `entity_done.txt`.
+* `scrape_buildings()`: every BIN from `/map`, then each `/building/{bin}` → `buildings.parquet`, `building_mentions.parquet` (bin × doc × page).
+* `scrape_browse()`: breadth-first walk over `/browse` → collections → boxes → `browse_docs.parquet`.
+* `scrape_changes()` → `catalog_changes.parquet`; `scrape_contradictions()` → `contradictions.parquet`.
 
-*Why:* this is the cheapest way to find out which documents exist. Together these tables produce the master list of `doc_id`s that every later step iterates over. The entity and building mentions are also the raw edges for the network analysis (RQ1) and the spatial analysis (RQ2), so no entity extraction of our own is needed.
+Together these give the master list of `doc_id`s that every later step iterates over. The entity and building mentions are also the raw links for the network and spatial analyses, so no entity extraction of our own is needed.
 
 ### 2. Scrape document metadata: `scrape_docs.py`
-For every known `doc_id`, this step fetches `/doc/{id}`, reads `n_pages`, then fetches `/doc/{id}/p/2 … n`. `parse_doc_page()` extracts collection, agency, box and folder, Bates range, title and description (with confidence), dates, contaminants, OCR status, and links to entities, buildings and PDFs. It writes one row per page to `docs.jsonl`.
+For every known `doc_id`: fetch `/doc/{id}`, read `n_pages`, then fetch `/doc/{id}/p/2 … n`. `parse_doc_page()` extracts collection, agency, box and folder, Bates range, title and description, dates, contaminants, OCR status, and links to entities, buildings and PDFs → one row per page in `docs.jsonl`. A document is marked done in `docs_done.txt` only if **every** page succeeded; on restart, the missing pages are worked out from the rows already saved.
 
-A document is marked done in `docs_done.txt` only if **every** page succeeded. On restart, the step works out which pages are still missing from the rows already saved.
-
-*Why:* the archival provenance (agency, box, folder), the site's dates and the contaminant tags exist only on these pages. Contaminants and OCR status are page-level, so we need every page, not just page 1.
+Contaminants, OCR status and building links are page-level, so every page is needed, not just page 1.
 
 ### 3. Get the PDFs: `get_pdfs.py`
-- `unzip_all()` unzips the bulk ZIPs you downloaded by hand from <https://911records.org/downloads> and put in `data/raw/zips/`. That page has a human check, so the download is done in a browser.
-- `download_missing()` fetches every PDF that is still missing from the City portal. If step 2 ran on a sample, only that sample's PDFs are fetched.
+* `unzip_all()` unzips the bulk ZIPs downloaded by hand from <https://911records.org/downloads> into `data/raw/zips/` (that page has a human check, so the download is done in a browser).
+* `download_missing()` fetches every PDF still missing from the City portal (only the sample's, if step 2 ran on a sample).
 
-PDFs are saved as `data/raw/pdfs/{6 digits}/{doc_id}.pdf`, in subfolders of about 1,000 files. Each destination path is rebuilt from the `doc_id`; paths inside a ZIP are never trusted.
-
-*Why:* the PDFs are the primary source. ZIPs come first because they are much faster and put no load on the servers.
+PDFs are saved as `data/raw/pdfs/{6 digits}/{doc_id}.pdf`. Each path is rebuilt from the `doc_id`; paths inside a ZIP are never trusted.
 
 ### 4. Extract page text: `extract_text.py`
-This step runs in parallel (`TEXT_WORKERS` processes) and works through each PDF page by page:
-1. **`pdftotext`** reads the embedded text layer. This is the same text the site shows, and it needs no web requests.
-2. If the page has fewer than `MIN_CHARS` characters, it is a scanned image. The step renders it at 300 dpi and runs **Tesseract**, recording the mean word confidence.
-3. If the page is still empty and `USE_SITE_FALLBACK` is on, the step fetches that one page's text from the site.
+In parallel (`TEXT_WORKERS` processes), page by page:
+1. **`pdftotext`** reads the embedded text layer (the same text the site shows; no web requests).
+2. A page with fewer than `MIN_CHARS` characters is an image: it is rendered at 300 dpi and read with **Tesseract**, recording the mean word confidence.
+3. If still empty and `USE_SITE_FALLBACK` is on, that one page's text is fetched from the site.
 
-It writes `pages.jsonl` with the columns `doc_id, page, text, source (pdftotext | tesseract | site | none), ocr_confidence`, and is resumable through `text_done.txt`.
-
-*Why:* the order goes from the cheapest and most faithful source to the network as a last resort. The `source` and `ocr_confidence` columns let the analysis filter or weight pages by text quality.
+→ `pages.jsonl` (`doc_id, page, text, source, ocr_confidence`), resumable through `text_done.txt`.
 
 ### 5. Build the final tables: `build_tables.py`
-- **`documents`:** the union of every known ID, every scraped ID and every PDF on disk. Document-level fields come from `docs.jsonl`, taking the first value that is not a placeholder. The step also adds `site_date`, `bates_start`, `pdf_path`, `url`, and `removed`/`removed_date` (set when the last catalog change was a removal).
-- **`pages`:** `pages.jsonl` plus `bates_page`, a date (from the page or its document) with `date_source`, and page-level site metadata (contaminants, OCR status, building BINs). Text that is still empty is filled from the site's OCR.
-- **`entities`, `entity_mentions`, `buildings`, `building_mentions`, `catalog_changes`, `contradictions`:** from step 1, with mention rows deduplicated.
+* **`documents`:** the union of every known ID, every scraped ID and every PDF on disk. Document-level fields come from `docs.jsonl` (first value that is not a placeholder), plus `site_date`, `bates_start`, `pdf_path`, `url`, and `removed` / `removed_date` from the last catalog change.
+* **`pages`:** `pages.jsonl` plus `bates_page`, a date with `date_source`, and the page-level site metadata (contaminants, OCR status, building BINs).
+* **`entities`, `entity_mentions`, `buildings`, `building_mentions`, `catalog_changes`:** from step 1, mention rows deduplicated. `contradictions` is written too when step 1 produced it (it is not in the committed `data/final/`).
 
-It finishes with sanity checks: mention rows that point to unknown documents, and duplicate `(doc_id, page)` rows.
+It ends with two quick checks (mentions pointing to unknown documents, duplicate pages); `verify.py` does the full set.
 
-*Why:* a single join key everywhere, `doc_id` (`NYC-WTC_#########`, which is also the first Bates number) plus `page`. Pages are cited by `bates_page`.
+## Outputs
 
-## Outputs (`data/final/`)
-`documents`, `pages`, `entities`, `entity_mentions`, `buildings`, `building_mentions`, `catalog_changes`, `contradictions`. The join keys are `doc_id` + `page`, `entity_type` + `slug`, and `bin`.
+**`data/final/`** (committed with Git LFS; join keys `doc_id` + `page`, `entity_type` + `slug`, `bin`)
 
-Intermediate files are kept in `data/raw/html/` (cached HTML), `data/raw/zips/`, `data/raw/pdfs/`, and `data/interim/` (per-step outputs and `*_done.txt`). All of them are gitignored; only `data/final/` is committed.
+| Table | Rows | One row per |
+| --- | --- | --- |
+| `documents` | 64,619 | document ID (64,385 scraped documents + 234 ID-only rows, see the report) |
+| `pages` | 230,888 | page, with its text |
+| `entities` | 15,915 | entity (7 types) |
+| `entity_mentions` | 650,196 | entity × page |
+| `buildings` | 984 | building (BIN) or lot (BBL) |
+| `building_mentions` | 16,151 | building × page, from the building's page |
+| `catalog_changes` | 794 | change row in a capture |
+
+Every column: the report's Appendix A (data dictionary). Intermediate files (`data/raw/html/`, `data/raw/zips/`, `data/raw/pdfs/`, `data/interim/`) are gitignored.
+
+**`outputs/figures/ingestion/`**
+
+| Figure | Shows |
+| --- | --- |
+| `figI1_whose_files` | Share of documents and of pages by the agency whose files they are |
+| `figI2_building_links` | For the most-documented buildings: the site's page count, `building_mentions` and the page-level tags |
+
+## Verification (`verify.py`)
+
+Needs only `data/final/`. Assertions:
+1. The files are real tables, not Git LFS pointers.
+2. Keys: `doc_id` well formed and unique, `bates_start` equal to its number; `(doc_id, page)`, `(entity_type, slug)` and `bin` unique.
+3. Completeness: every scraped document has all its pages, numbered 1 … `n_pages`, and `bates_page` = `doc_id` + page − 1.
+4. Joins: every entity and building mention points to an existing entity or building and an existing page.
+5. Our entity mentions equal the site's page count for every entity except 3 "Page Avenue" addresses (the site's count is the house number).
+6. Text `source` values, and OCR confidence only where Tesseract ran.
+
+Known issues, counted and printed (report section 6):
+
+7. Document IDs with no metadata, and how many are the last page of another document.
+8. `catalog_changes.change` is always "changed"; the type is in `context`.
+9. `building_mentions` against the site's page counts and the page-level tags.
+
+## Changing things
+
+| To change | Edit | Then |
+| --- | --- | --- |
+| Request rate, user agent, sources | `config.py` (`SECONDS_BETWEEN_REQUESTS`, `USER_AGENT`, `SITE`, `CITY_PDF_URL`) | keep ≥ 1 second for the site |
+| OCR and fallback | `config.TEXT_WORKERS`, `MIN_CHARS`, `USE_TESSERACT`, `USE_SITE_FALLBACK` | delete `data/interim/text_done.txt` and `pages.jsonl`, re-run `extract_text`, `build_tables` |
+| How a page is parsed | `parsers.py` | re-run the step that reads that page (cached, no new requests), then `build_tables`, `verify` |
+| Which columns reach `data/final/` | `build_tables.DOC_LEVEL_COLS`, `PAGE_LEVEL_COLS`, `keep` | re-run `build_tables`, then update the data dictionary |
+
+After a rebuild, commit `data/final/` (Git LFS), then re-run processing and the analyses, and update the report's numbers.
 
 ## Full pipeline at a glance
 
 ```
-scrape_site → scrape_docs → get_pdfs → extract_text → build_tables   (src/ingestion → data/final/)
-          → clean                                                    (src/processing → data/processed/)
-          → analysis (src/analysis/network, notebooks)
+scrape_site → scrape_docs → get_pdfs → extract_text → build_tables → verify → figures   (src/ingestion → data/final/)
+          → clean → verify → figures                                                    (src/processing → data/processed/)
+          → run → verify                                                                (src/analysis/network → outputs/network/)
 ```
+Walkthroughs: `notebooks/00.data_ingestion.ipynb`, `01.process_pipeline.ipynb`, `02.network_centrality.ipynb`. Results: `docs/00.ingestion_report.md`, `01.processing_report.md`, `02.network_analysis_report.md`.

@@ -4,7 +4,7 @@ Ingestion gives us a faithful copy of what the site and the PDFs say. This step 
 
 `data/final/` is never modified. The cleaned copies go to `data/processed/`, which is gitignored and recreated with one command.
 
-What the cleaning found and changed, with numbers, is in [`docs/processing_report.md`](../../docs/processing_report.md). The step-by-step walkthrough is [`notebooks/01.process_pipeline.ipynb`](../../notebooks/01.process_pipeline.ipynb).
+What the cleaning found and changed, with numbers, is in [`docs/01.processing_report.md`](../../docs/01.processing_report.md). The step-by-step walkthrough is [`notebooks/01.process_pipeline.ipynb`](../../notebooks/01.process_pipeline.ipynb).
 
 ## How to run
 
@@ -122,8 +122,8 @@ Every downstream analysis reads `data/processed/`, so re-run them after a change
 ## Full pipeline at a glance
 
 ```
-scrape_site → scrape_docs → get_pdfs → extract_text → build_tables   (src/ingestion → data/final/)
-          → clean → verify → figures                                 (src/processing → data/processed/, outputs/figures/processing/)
-          → run → verify                                             (src/analysis/network → outputs/network/, outputs/figures/network/)
+scrape_site → scrape_docs → get_pdfs → extract_text → build_tables → verify → figures   (src/ingestion → data/final/)
+          → clean → verify → figures                                                    (src/processing → data/processed/)
+          → run → verify                                                                (src/analysis/network → outputs/network/)
 ```
-Walkthroughs: `notebooks/01.process_pipeline.ipynb`, `notebooks/02.network_centrality.ipynb`. Results: `docs/processing_report.md`, `docs/network_analysis_report.md`.
+Walkthroughs: `notebooks/00.data_ingestion.ipynb`, `01.process_pipeline.ipynb`, `02.network_centrality.ipynb`. Results: `docs/00.ingestion_report.md`, `01.processing_report.md`, `02.network_analysis_report.md`.
