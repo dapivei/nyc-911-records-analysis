@@ -1,0 +1,38 @@
+DEP BUILDING OVERSIGHT AFTER 9/11 — summary
+============================================================
+building-document links staged: 4,706 | buildings: 941
+documents per stage: test_report 604, inspection 467, request 306, cleanup_exterior 202, cleanup_interior 57, clearance 25
+date sources: archive page date 650, title 498, DOB printout date (proxy) 222, labelled date in text 162, letter date 129
+buildings with each stage: cleanup_exterior 262, cleanup_interior 105, clearance 83, inspection 727, request 374, test_report 554
+
+Q1  TIME TO FIRST DEP INSPECTION
+  buildings with coordinates: 970 | inspected: 719 (74%)
+  median days to inspection (inspected only), by type: commercial/retail 102, education 34, garage/transport 114, government 216, health 399, hotel 165, office 141, religious/community 34, residential 34, unknown 34, utility 111, warehouse 34
+  ... by distance: <250 m 148, 250–500 m 157, 500–750 m 157, 750 m–1 km 34, >1 km 34
+  Cox model (hazard ratio of being inspected sooner; >1 = sooner; reference = residential):
+    dist_100m                    HR 1.22 [1.19–1.26] p=0.000
+    log_floors                   HR 0.86 [0.78–0.96] p=0.009
+    floors_missing               HR 1.40 [1.06–1.84] p=0.017
+    btype_commercial/retail      HR 0.76 [0.59–0.99] p=0.045
+    btype_hotel                  HR 0.57 [0.35–0.94] p=0.027
+    btype_office                 HR 0.66 [0.53–0.83] p=0.000
+    btype_other                  HR 0.58 [0.42–0.80] p=0.001
+    btype_unknown                HR 0.77 [0.62–0.94] p=0.012
+  chi-square report coverage by dist_band: p=0.000
+
+Q2  INSPECTED BUILDINGS WITHOUT A TEST REPORT IN THE RECORDS
+  inspected: 727 | with any test report: 377 (52%) | NO report in records: 350 (48%)
+  report within 30 days before to 180 days after inspection: 30%
+
+Q3  GAPS BETWEEN STAGES (median days [IQR]; share in expected order)
+  inspection -> test report          all dates            n= 377      41 [-107..120]  in order 62%
+  inspection -> test report          day-precision only   n= 140    -102 [-133..17]  in order 35%
+  test report -> interior cleanup    all dates            n= 100     -15 [-15..52]  in order 40%
+  test report -> interior cleanup    day-precision only   n=  29      13 [-71..178]  in order 59%
+  inspection -> exterior cleanup     all dates            n= 177      77 [13..153]  in order 80%
+  inspection -> exterior cleanup     day-precision only   n=  69     124 [30..139]  in order 88%
+  inspection -> clearance            all dates            n=  50      -6 [-155..26]  in order 40%
+  inspection -> clearance            day-precision only   n=  19    -156 [-162..-154]  in order 10%
+
+CAVEATS: stages come from machine-generated titles (validate with verify_sample.csv);
+'no report in the records' does not mean 'never tested'; title-month dates are month-precision.

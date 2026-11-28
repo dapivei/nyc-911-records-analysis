@@ -5,15 +5,21 @@
 
 Steps: data checks -> nodes/classification -> main network (page co-occurrence, extracted
 organizations) -> supplement with 4 advocacy nodes -> frequency check -> descriptive group
-summaries in three network variants (sensitivity) -> figures.
+summaries in three network variants (sensitivity) -> figures -> beyond frequency (null models,
+hyperbolic weights, validated backbone, network without DEP's files, document bootstrap, monthly
+networks, communities; ~25 min on 2 cores the first time, cached afterwards).
+
+    python -m src.analysis.network.run --skip-extensions    # only the original steps (~2 min)
 """
+import sys
 import json
 import platform
 
 import networkx as nx
 import pandas as pd
 
-from src.analysis.network import build, checks, figures, metrics, pipeline, robustness, settings
+from src.analysis.network import (backbone, bootstrap, build, checks, figures, metrics, nullmodel, pipeline,
+                                  robustness, settings, temporal)
 
 NODE_COLS = ["node_id", "entity_id", "name", "node_kind", "group", "group_label", "review_status", "n_docs",
              "n_pages", "first_doc_date", "last_doc_date", "degree", "degree_centrality", "strength",
@@ -116,6 +122,9 @@ def main():
     figures.frequency_vs_degree(lab, label_ids)
     figures.network_plot(sup)
 
+    if "--skip-extensions" not in sys.argv:
+        extensions(prep, sup)
+
     meta = {"settings": {k: getattr(settings, k) for k in dir(settings) if k.isupper()},
             "betweenness_main": main_net["betweenness_info"], "date_coverage": dates,
             "multi_org_page_cutoff": cutoff, "scenarios": scen,
@@ -124,6 +133,83 @@ def main():
     (settings.OUT / "run_metadata.json").write_text(json.dumps(meta, indent=2, default=str))
     print(stats.T.to_string())
     print(f"tables -> {settings.OUT}/, figures -> {settings.FIGURES}/")
+
+
+def extensions(prep: pipeline.Prepared, sup: dict):
+    """Section 6 of the notebook: separate structural position from mention volume."""
+    views = metrics.hypothesis_views
+    # 6a. frequency-preserving null models (cached .npz)
+    for strata in (None, "source_agency"):
+        cmp = nullmodel.run(prep, sup, strata=strata)
+        tag = strata or "global"
+        write(cmp.drop(columns=[c for c in cmp.columns if c in ("basis",)]), f"null_{tag}_nodes.csv")
+        write(nullmodel.group_table(cmp, views), f"null_{tag}_group_summary.csv")
+        if strata is None:
+            figures.raw_vs_adjusted(cmp, figures.FIG8_NAMES)
+            figures.observed_vs_null(cmp, {
+                "degree": ["NYC Dept. of Environmental Protection", "U.S. EPA", "NYC Dept. of Health and Mental Hygiene",
+                           "NYC Dept. of Buildings", "Century Realty Inc.",
+                           "NYCOSH (NY Committee for Occupational Safety & Health)"],
+                "betweenness": ["NYC Dept. of Environmental Protection", "U.S. EPA",
+                                "NYC Dept. of Health and Mental Hygiene", "NYC Dept. of Buildings",
+                                "NYC Office of the Mayor", "Port Authority of NY & NJ", "Rj Lee Group Inc.",
+                                "Century Realty Inc.", "NYCOSH (NY Committee for Occupational Safety & Health)",
+                                "9/11 Environmental Action", "Natural Resources Defense Council"]})
+    # 6b. hyperbolic weights
+    wm = sup["nodes"].merge(backbone.weighted_metrics(sup["nodes"]["node_id"], backbone.newman_edges(sup["evidence"])),
+                            on="node_id")
+    write(wm[["node_id", "name", "group", "n_pages", "strength_newman", "betweenness_weighted",
+              "pct_strength_newman", "pct_betweenness_weighted"]], "nodes_hyperbolic_weights.csv")
+    # 6c. validated backbone, its sensitivity to the rule, DEP's strongest ties
+    e_val, bbn, G_bb = backbone.backbone_network(sup, prep)
+    write(e_val, "edges_validated.csv")
+    write(backbone.backbone_stats(e_val), "backbone_stats.csv")
+    write(bbn[["node_id", "name", "group", "n_pages", "degree", "bb_degree", "bb_betweenness",
+               "bb_pct_degree_centrality", "bb_pct_betweenness"]], "nodes_backbone.csv")
+    rules = backbone.rule_sensitivity(sup, prep)
+    write(rules, "backbone_rule_sensitivity.csv")
+    names = prep.node_info.set_index("node_id")["name"]
+    write(backbone.dep_strongest_ties(e_val, "agency:nyc-dep", names), "backbone_dep_strongest_ties.csv")
+    # 6g. consensus blocks, their stability and what their documents are about
+    membership, comm, _ = backbone.consensus_communities(G_bb, prep.node_info)
+    write(membership, "backbone_communities_membership.csv")
+    write(comm.assign(modularity=comm.attrs["modularity"]), "backbone_communities.csv")
+    stab, stab_pairs = backbone.community_stability(G_bb, prep.node_info, [("NIOSH", "OSHA")])
+    write(stab_pairs.assign(ari_median=stab["ari_median"], ari_min=stab["ari_min"]), "backbone_communities_stability.csv")
+    terms = backbone.block_title_terms(sup["evidence"], e_val[e_val["validated_bonferroni"]], membership,
+                                       prep.tables["documents"], comm["community"].head(6))
+    write(terms, "backbone_block_title_terms.csv")
+    adv = list(prep.node_info.loc[prep.node_info["group"] == "public_health_advocacy", "name"])
+    loose = rules.set_index("rule").at["validated_fdr", "advocacy_ties"]
+    figures.backbone_blocks(
+        G_bb, membership, prep.node_info, adv,
+        terms={r.community: ", ".join(r.terms.split(", ")[:5]) for r in terms.itertuples()},
+        stability=dict(zip(comm["community"], comm["stability"])), adv_ties_loose=int(loose),
+        unstable_note=f"The least stable pair is NIOSH and OSHA (same block in "
+                      f"{stab_pairs.loc[0, 'same_block_share']:.0%} of single runs).")
+    # 6d. without DEP's own files
+    nodep = pipeline.build_network(prep, unit="page", include_advocacy=True,
+                                   exclude_source_agency=settings.EXCLUDED_SOURCE_AGENCY)
+    write(views(robustness.add_ranks(nodep["nodes"])), "hypothesis_nodes_without_dep_files.csv")
+    share, base = pipeline.share_in_source(prep, settings.EXCLUDED_SOURCE_AGENCY)
+    info = prep.node_info.set_index("node_id")
+    figures.whose_files(info[info["name"].isin(figures.FIG9_NAMES)][["name", "group"]].join(share.rename("share")), base)
+    # 6e. document bootstrap (cached .npz)
+    ids, deg, bt = bootstrap.run(prep, sup)
+    iv = bootstrap.rank_intervals(ids, deg, bt, views(sup["nodes"]))
+    write(iv, "bootstrap_rank_intervals.csv")
+    write(bootstrap.comparison_stability(ids, deg, bt, views(sup["nodes"])), "bootstrap_comparison_stability.csv")
+    figures.bootstrap_ranks(iv, "betweenness")
+    # 6f. monthly networks (cached csv), data-driven phases, Law Department documents
+    tm = temporal.run(prep)
+    write(temporal.phase_brokers(tm), "temporal_phase_brokers.csv")
+    write(temporal.group_by_month(tm, views), "temporal_groups_by_month.csv")
+    write(temporal.phase_table(tm), "temporal_phase_boundaries.csv")
+    law = temporal.law_department_documents(prep)
+    law.index = law.index.astype(str)
+    write(law.reset_index(), "temporal_law_department_documents.csv")
+    phases = [(str(a), str(b), name) for (a, b), (_, _, name) in zip(temporal.data_phases(tm, 3), figures.PHASES)]
+    figures.relay_chart(tm, figures.RELAY_ROWS, figures.RELAY_ANCHORS, phases=phases)
 
 
 if __name__ == "__main__":

@@ -33,5 +33,16 @@ HYPOTHESIS_GROUPS = ("municipal_regulatory", "private_real_estate", "public_heal
 # classification sensitivity: real-estate nodes whose group was confirmed by hand
 CONFIRMED_STATUS = "manual"
 
+# --- beyond frequency (nullmodel.py, backbone.py, bootstrap.py) -----------------------------
+NULL_SAMPLES = 100              # curveball randomizations per null model (each ~6 s of betweenness)
+NULL_TRADES_PER_PAGE = 20       # curveball trades = this x number of pages (see nullmodel.mixing_check)
+BACKBONE_ALPHA = 0.01           # family-wise error rate for hypergeometric edge validation
+BOOTSTRAP_SAMPLES = 100         # document-level bootstrap resamples for rank intervals
+CONSENSUS_RUNS = 100            # Louvain runs behind the consensus blocks
+CONSENSUS_TAU = 0.5             # pairs together in >= this share of runs are kept in the consensus graph
+TEMPORAL_START, TEMPORAL_END = "2001-09", "2002-12"   # monthly networks (each month >= 900 pages)
+TEMPORAL_NULL_SAMPLES = 100     # null samples per month (month graphs are small; ~4 min on 2 cores)
+EXCLUDED_SOURCE_AGENCY = "Environmental Protection, Dept. of"   # archive-bias check: drop DEP's own files
+
 TOP_N_RANKING = 20
 NETWORK_FIG_TOP_COMPANIES = 25                       # companies shown next to all agencies

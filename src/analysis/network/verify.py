@@ -9,6 +9,10 @@
 7. study-window network: pages used per node recounted from raw entity_mentions + documents
 8. n_pages_used under the page-size cut: toy network through pipeline.build_network (single-organization
    pages and isolates included), and every node of the real scenario recounted from raw mentions
+9. beyond-frequency methods (nullmodel, backbone, bootstrap) on toy inputs: curveball preserves both
+   degree sequences, projection equals build.cooccurrence, hypergeometric p-values equal a brute-force
+   enumeration, hyperbolic weights give each page total weight 1 per organization, bootstrap resampling
+   keeps documents whole
 """
 import itertools
 
@@ -182,6 +186,73 @@ def check_pages_used_filter():
           f"{len(got)} hypothesis nodes match a recount from raw mentions")
 
 
+def check_beyond_frequency():
+    """9. toy checks for nullmodel.py, backbone.py and bootstrap.py."""
+    import math
+    import random
+    from src.analysis.network import backbone, bootstrap, nullmodel
+
+    # curveball keeps every page size and every node's page count, and actually moves incidences
+    rng = np.random.default_rng(0)
+    pages = [sorted(rng.choice(30, size=k, replace=False).tolist()) for k in rng.integers(1, 6, 400)]
+    for strata in (None, np.repeat([0, 1], 200)):
+        P = nullmodel.curveball(pages, 20 * len(pages), random.Random(1), strata)
+        assert [len(s) for s in P] == [len(x) for x in pages]
+        assert np.array_equal(np.bincount([v for s in P for v in s], minlength=30),
+                              np.bincount([v for x in pages for v in x], minlength=30))
+        if strata is not None:   # within-stratum trades keep each stratum's node counts too
+            for half in (slice(0, 200), slice(200, 400)):
+                assert np.array_equal(np.bincount([v for s in P[half] for v in s], minlength=30),
+                                      np.bincount([v for x in pages[half] for v in x], minlength=30))
+        assert sum(set(a) != set(b) for a, b in zip(P, pages)) > 100
+    # sparse projection == build.cooccurrence on the same pages
+    om = pd.DataFrame([(f"n{v:02d}", "D", p) for p, x in enumerate(pages) for v in x], columns=["node_id", "doc_id", "page"])
+    edges, ev = build.cooccurrence(om, "page")
+    C = nullmodel.project([set(x) for x in pages], 30).tocoo()
+    proj = {(f"n{i:02d}", f"n{j:02d}"): int(w) for i, j, w in zip(C.row, C.col, C.data) if i < j}
+    assert proj == {(r.source, r.target): r.weight for r in edges.itertuples()}
+    # null-model comparison on a toy: observed above / below every sample
+    toy = pd.DataFrame({"node_id": ["a", "b"], "degree": [5, 1], "betweenness": [0.5, 0.0]})
+    cmp = nullmodel.compare(toy, ["a", "b"], np.array([[2.0, 1], [4, 1]]), np.array([[0.1, 0], [0.3, 0]]))
+    assert cmp["null_q_degree"].tolist() == [1.0, 0.5] and np.isclose(cmp.loc[0, "ratio_betweenness"], 2.5)
+    assert np.isnan(cmp.loc[1, "ratio_betweenness"]) and np.isclose(cmp.loc[0, "p_upper_degree"], 1 / 3)
+    # hypergeometric p-value == brute-force tail sum
+    N, ni, nj, w = 40, 9, 12, 6
+    brute = sum(math.comb(ni, k) * math.comb(N - ni, nj - k) for k in range(w, min(ni, nj) + 1)) / math.comb(N, nj)
+    e = backbone.validate_edges(pd.DataFrame({"source": ["x"], "target": ["y"], "weight": [w]}),
+                                pd.Series({"x": ni, "y": nj}), N, n_nodes=2, alpha=1.0)
+    assert np.isclose(e.loc[0, "p_hypergeom"], brute) and np.isclose(e.loc[0, "expected_weight"], ni * nj / N)
+    # hyperbolic weights: each organization's strength == number of its pages with >= 1 partner
+    ne = backbone.newman_edges(ev)
+    strength = pd.concat([ne[["source", "weight_newman"]].rename(columns={"source": "n"}),
+                          ne[["target", "weight_newman"]].rename(columns={"target": "n"})]).groupby("n")["weight_newman"].sum()
+    multi = om.groupby("page")["node_id"].transform("size") >= 2
+    assert np.allclose(strength.sort_index(), om[multi].groupby("node_id").size().sort_index())
+    # bootstrap: documents stay whole and every copy is a distinct document
+    om2 = pd.DataFrame([("a", "D1", 1), ("b", "D1", 1), ("a", "D2", 1), ("c", "D3", 2)],
+                       columns=["node_id", "doc_id", "page"])
+    r = bootstrap.resample(om2, np.random.default_rng(3))
+    base = r["doc_id"].str.split("#").str[0]
+    for d, g in r.groupby("doc_id"):
+        orig = om2[om2["doc_id"] == d.split("#")[0]]
+        assert sorted(g["node_id"]) == sorted(orig["node_id"])
+    assert base.nunique() <= 3 and r["doc_id"].nunique() == r.groupby("doc_id").ngroups
+    # data-driven phases: a profile with two clear regimes is split exactly at the change
+    X = pd.DataFrame([[1, 0]] * 4 + [[0, 1]] * 6, columns=["a", "b"], dtype=float)
+    from src.analysis.network import temporal
+    assert temporal.segment_months(X, 2) == [0, 4]
+    # adjusted Rand index: identical partitions = 1 (labels permuted), unrelated near 0
+    assert np.isclose(backbone._ari([0, 0, 1, 1, 2, 2], [5, 5, 3, 3, 9, 9]), 1.0)
+    # consensus blocks on two disjoint cliques: two blocks, both perfectly stable
+    Gc = nx.disjoint_union(nx.complete_graph(12), nx.complete_graph(12))
+    nx.set_edge_attributes(Gc, 1.0, "weight")
+    info_c = pd.DataFrame({"node_id": list(Gc), "name": [f"n{i}" for i in Gc], "node_kind": "company"})
+    mem_c, sum_c, _ = backbone.consensus_communities(Gc, info_c, n_runs=10)
+    assert mem_c["community"].nunique() == 2 and np.allclose(sum_c["stability"], 1.0)
+    print("9. null model, backbone and bootstrap: toy checks pass (degree sequences preserved, projection, "
+          "hypergeometric p, hyperbolic weights, whole-document resampling, phase segmentation, ARI, consensus blocks)")
+
+
 if __name__ == "__main__":
     check_toy()
     nodes, edges = check_outputs()
@@ -190,4 +261,5 @@ if __name__ == "__main__":
     check_group_summaries()
     check_window_filter()
     check_pages_used_filter()
+    check_beyond_frequency()
     print("all checks passed")

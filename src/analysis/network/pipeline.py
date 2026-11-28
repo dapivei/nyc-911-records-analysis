@@ -51,7 +51,8 @@ def prepare(with_advocacy: bool = True, keep_text: bool = False) -> Prepared:
 
 
 def build_network(prep: Prepared, unit: str = "page", include_advocacy: bool = False,
-                  max_unit_size: float | None = None, study_window_only: bool = False) -> dict:
+                  max_unit_size: float | None = None, study_window_only: bool = False,
+                  exclude_source_agency: str | None = None) -> dict:
     """Build one network variant and compute its node metrics.
 
     unit             "page" (main) or "doc"
@@ -60,6 +61,8 @@ def build_network(prep: Prepared, unit: str = "page", include_advocacy: bool = F
     study_window_only keep only mentions on documents with in_study_window (2001-09-11..2009-12-31;
                      undated documents are dropped). The NODE SET stays fixed: a node with no
                      mention left becomes an isolate, so every variant ranks the same nodes.
+    exclude_source_agency drop every mention on documents whose `agency` (whose files the document
+                     came from) equals this value, e.g. DEP (archive-bias check). Node set fixed, as above.
 
     Returns a dict with edges, evidence, graph, stats, nodes, betweenness_info and params.
     """
@@ -68,6 +71,9 @@ def build_network(prep: Prepared, unit: str = "page", include_advocacy: bool = F
     if study_window_only:
         docs = prep.tables["documents"]
         om = om[om["doc_id"].isin(docs.loc[docs["in_study_window"].astype(bool), "doc_id"])]
+    if exclude_source_agency is not None:
+        docs = prep.tables["documents"]
+        om = om[~om["doc_id"].isin(docs.loc[docs["agency"].eq(exclude_source_agency), "doc_id"])]
     om = build.drop_large_units(om, unit, max_unit_size)     # same mention rows for edges and n_pages_used
     edges, evidence = build.cooccurrence(om, unit=unit, max_unit_size=max_unit_size)
     G = metrics.to_graph(nodes["node_id"], edges)
@@ -82,4 +88,14 @@ def build_network(prep: Prepared, unit: str = "page", include_advocacy: bool = F
     return {"unit": unit, "edges": edges, "evidence": evidence, "graph": G,
             "stats": metrics.global_stats(G), "nodes": node_df, "betweenness_info": info,
             "params": {"unit": unit, "include_advocacy": include_advocacy, "max_unit_size": max_unit_size,
-                       "study_window_only": study_window_only}}
+                       "study_window_only": study_window_only, "exclude_source_agency": exclude_source_agency}}
+
+
+def share_in_source(prep: Prepared, agency: str, include_advocacy: bool = True) -> tuple[pd.Series, float]:
+    """Per node: share of its pages on documents from `agency`'s files; and the same share over all
+    pages that name any organization (the archive-wide baseline)."""
+    om = pd.concat([prep.om, prep.adv]) if include_advocacy else prep.om
+    docs = prep.tables["documents"]
+    src = set(docs.loc[docs["agency"].eq(agency), "doc_id"])
+    om = om.assign(in_src=om["doc_id"].isin(src))
+    return om.groupby("node_id")["in_src"].mean(), float(om.drop_duplicates(["doc_id", "page"])["in_src"].mean())
