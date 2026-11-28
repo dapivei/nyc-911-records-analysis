@@ -16,7 +16,6 @@ import pandas as pd
 
 import config
 from src.ingestion.files import read_table
-from src.ingestion.text_tools import parse_site_date
 
 I, F = config.INTERIM, config.FINAL
 

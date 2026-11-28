@@ -2,10 +2,7 @@
 
 The site has no public API, so these parsers work from the rendered HTML.
 They are written defensively (several strategies per field) because the
-markup can change. ALWAYS run `python main.py inspect <url>` on a few
-pages first and check that the printed fields look right; if something is
-empty, open the saved HTML and adjust the label lists / selectors below.
-Raw HTML is cached, so after a fix, re-running a step costs no new requests.
+markup can change.Raw HTML is cached, so after a fix, re-running a step costs no new requests.
 """
 from __future__ import annotations
 
