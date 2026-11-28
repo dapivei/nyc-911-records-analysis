@@ -1,6 +1,6 @@
 # Who held the 9/11 environmental response together? What the city's released records show, and what they hide
 
-Code, how to run, outputs and checks: [`src/analysis/network/README.md`](../src/analysis/network/README.md) · Walkthrough: `notebooks/network_centrality.ipynb`
+Code, how to run, outputs and checks: [`src/analysis/network/README.md`](../src/analysis/network/README.md) · Walkthrough: [`notebooks/02.network_centrality.ipynb`](../notebooks/02.network_centrality.ipynb)
 
 ## Summary
 
