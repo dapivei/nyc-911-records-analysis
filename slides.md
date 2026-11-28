@@ -25,8 +25,8 @@ mdc: true
 <div class="photo-credit absolute bottom-3 left-14 z-10 text-white/70">Ground Zero, 28 Sep 2001 · Andrea Booher / FEMA · public domain</div>
 
 <!--
-0:00–0:20. Title. One sentence: "In September the City finally released its 9/11 environmental records. We turned them into data."
-Timing plan: 0–1:40 motivation · 1:40–5:05 pipeline, code and cleaning · 5:05–7:50 RQ1 network · 7:50–9:10 RQ2 and RQ3 (in progress) · 9:10–10 takeaways. Backup slides after “Thank you”.
+0:00–0:25. Title. One sentence: "In September the City finally released its 9/11 environmental records. We turned them into data."
+Timing plan: 0–2:25 motivation and questions · 2:25–6:00 the archive, pipeline, code and cleaning · 6:00–8:25 RQ1 network · 8:25–9:25 RQ2 and RQ3 (in progress) · 9:25–10 takeaways. Backup slides after “Thank you”.
 -->
 
 ---
@@ -74,7 +74,7 @@ Coverage focused on <b>single documents</b> (e.g. the Harding memo on possible l
 <div class="source-line">Sources: NYC Office of the Mayor, 8 Sep 2026 · CBS News · CNN, Sep 2026</div>
 
 <!--
-0:20–1:10. Why now: the release came after years of demands from first responders and families, and the settlement of the 9/11 Health Watch lawsuits.
+0:25–1:50. The story in order: Sep 18, 2001 “safe to breathe” → 2003 EPA Inspector General: not enough data to say so → Oct 2001 liability memo to the deputy mayor (35,000 potential plaintiffs) → 2023 records request, City says no records → 68 boxes found at DEP during the lawsuit → May 2026 judge: denial “arbitrary and capricious” → Sep 8, 2026 portal and settlement. End: the 68 boxes are in our data.
 Point: the news reads one memo at a time. Our questions need the whole archive.
 -->
 
@@ -122,7 +122,7 @@ Did internal language about risk and liability move ahead of what the public was
 <div v-click class="mt-5 text-center text-[16px]">Reading the archive as data also shows its <b>limits</b>: whose files were released, and who is missing from them.</div>
 
 <!--
-1:10–1:40. Read the three questions only. RQ2 and RQ3 are being finished by teammates; we show what is ready for them at the end.
+1:50–2:25. Read the three questions only. RQ2 and RQ3 are being finished by teammates; we show what is ready for them at the end.
 -->
 
 ---
@@ -141,6 +141,23 @@ color: white
 
 :: title ::
 
+# What we are working with: from the release down to one page
+
+:: content ::
+
+<ArchiveAnatomy />
+
+<!--
+2:25–3:25. Interactive: walk down the ladder. Release (where the pages are) → Collections (the 68 boxes: 71% of all pages; lab results, letters, inspections; 2001–2002) → Folders (organized by building, lab batch, person) → Page (one real page: its text, contaminants, organizations, building).
+-->
+
+---
+layout: top-title
+color: white
+---
+
+:: title ::
+
 # One pipeline, from scraped pages to answers
 
 :: content ::
@@ -150,7 +167,7 @@ color: white
 <div class="text-center text-[12.5px] mt-2 opacity-75">every step ships with a <b>README</b> (how to run it) · a <b>report</b> (what it found) · a <b>notebook</b> (walkthrough) · a <b>verify.py</b> (checks)</div>
 
 <!--
-1:40–2:40. Interactive: hover the stages left to right; stop on Scrape (polite, cached, resumable), Text (99.6% from the PDFs’ own text) and Checks (counts match the site’s own totals).
+3:25–4:15. Interactive: hover the stages left to right; stop on Scrape (polite, cached, resumable), Text (99.6% from the PDFs’ own text) and Checks (counts match the site’s own totals).
 -->
 
 ---
@@ -178,36 +195,7 @@ color: white
 </div>
 
 <!--
-2:40–3:15. Code slide: hover a bar to list its modules. Same layout in every step; any function can be imported in a notebook (the notebooks do this); verify scripts make every number checkable.
--->
-
----
-layout: two-cols-title
-columns: is-4
-color: white
----
-
-:: title ::
-
-# Our copy is complete, and it is two agencies’ files
-
-:: left ::
-
-<div class="space-y-3 mt-1">
-<div v-click class="stat-row"><span class="stat-n">64,385</span><span class="stat-l">documents, all 230,888 pages</span></div>
-<div v-click class="stat-row"><span class="stat-n">99.6%</span><span class="stat-l">of pages from the PDF’s own text; 865 read by OCR</span></div>
-<div v-click class="stat-row"><span class="stat-n">15,583</span><span class="stat-l">of 15,586 entities: our links match the site’s counts</span></div>
-<div v-click class="stat-row stat-warn-row"><span class="stat-n">52% / 74%</span><span class="stat-l">of documents are Education’s; of pages, DEP’s</span></div>
-</div>
-
-:: right ::
-
-<img src="@figures/slides/s_whose_files.png" class="fig mt-4 w-full" alt="Share of documents and pages by agency" />
-
-<div v-click class="takeaway mt-4">Every count over the archive is first a count over <b>these two agencies’ files</b>: one-page school air samples vs. long DEP files.</div>
-
-<!--
-3:15–3:40. Completeness: checked against the site's own totals. The composition matters for everything after: pages and documents give different pictures.
+4:15–4:40. Code slide: hover a bar to list its modules. Same layout in every step; any function can be imported in a notebook (the notebooks do this); verify scripts make every number checkable.
 -->
 
 ---
@@ -230,7 +218,7 @@ color: white
 </div>
 
 <!--
-3:40–4:15. The 1994 spike is asbestos results from 2001–2003 that print a 1994 NIOSH method date on every sheet. Without this, any time series has events that never happened.
+4:40–5:15. The 1994 spike is asbestos results from 2001–2003 that print a 1994 NIOSH method date on every sheet. Without this, any time series has events that never happened.
 -->
 
 ---
@@ -247,7 +235,7 @@ color: white
 <CleaningExplorer />
 
 <!--
-4:15–5:05. Interactive, one tab per fix (the date fix was the slide before). Page text: stamps removed from the text, kept as data. Usable text: move the words slider to show why 40%. Then Names, and Off-topic if time allows.
+5:15–6:00. Interactive, one tab per fix (the date fix was the slide before). Page text: stamps removed from the text, kept as data. Usable text: move the words slider to show why 40%. Then Names, and Off-topic if time allows.
 -->
 
 ---
@@ -284,7 +272,7 @@ color: white
 <div class="caption">Organizations named on more pages tend to have more ties (Spearman ρ = 0.44).</div>
 
 <!--
-5:05–5:45. This is the methodological heart: "position beyond volume" = observed centrality divided by what the random networks give for the same page count.
+6:00–6:35. This is the methodological heart: "position beyond volume" = observed centrality divided by what the random networks give for the same page count.
 -->
 
 ---
@@ -306,7 +294,7 @@ color: white
 </div>
 
 <!--
-5:45–6:25. Interactive: hover a line for one organization; the chips switch groups on and off; the search box answers “where is X?”. Blue lines (regulators) fall; coordinators stay high.
+6:35–7:10. Interactive: hover a line for one organization; the chips switch groups on and off; the search box answers “where is X?”. Blue lines (regulators) fall; coordinators stay high.
 -->
 
 ---
@@ -329,7 +317,7 @@ color: white
 </div>
 
 <!--
-6:25–7:10. Interactive: hover a month to list the organizations; click Sep 2001, then Dec 2002. A month counts an organization when it is named on 20+ pages and beats 95% of that month’s random networks.
+7:10–7:50. Interactive: hover a month to list the organizations; click Sep 2001, then Dec 2002. A month counts an organization when it is named on 20+ pages and beats 95% of that month’s random networks.
 -->
 
 ---
@@ -366,7 +354,7 @@ color: white
 </div>
 
 <!--
-7:10–7:50. Ties here are only those more frequent than chance. The affected public is largely missing from the City's own record.
+7:50–8:25. Ties here are only those more frequent than chance. The affected public is largely missing from the City's own record.
 -->
 
 ---
@@ -413,7 +401,7 @@ color: white
 </div>
 
 <!--
-7:50–8:30. Teammates' analysis. Replace the dashed box with the main map or result when ready.
+8:25–8:55. Teammates' analysis. Replace the dashed box with the main map or result when ready.
 -->
 
 ---
@@ -451,7 +439,7 @@ color: white
 <div class="photo-credit mt-1">WTC dust under the microscope: concrete, glass fiber, chrysotile asbestos · USGS · public domain</div>
 
 <!--
-8:30–9:10. Teammates' analysis. Asbestos and its fiber types are the most common contaminant tags in the archive (44% of pages carry a tag).
+8:55–9:25. Teammates' analysis. Asbestos and its fiber types are the most common contaminant tags in the archive (44% of pages carry a tag).
 -->
 
 ---
@@ -487,7 +475,7 @@ color: white
 <div v-click class="mt-5 text-center text-[17px] font-light">Recovery needs an owner as clear as the emergency, and the public needs a seat in the record.</div>
 
 <!--
-9:10–9:45. Three things we learned, three limits. End on the policy line from the network report.
+9:25–9:50. Three things we learned, three limits. End on the policy line from the network report.
 -->
 
 ---
@@ -512,7 +500,7 @@ Data: NYC 9/11 Document Portal and the 911records.org mirror.
 </div>
 
 <!--
-9:45–10:00. Questions; backup slides follow.
+9:50–10:00. Questions; backup slides follow.
 -->
 
 ---

@@ -5,6 +5,8 @@
 Every number is computed from the project's own tables, with the same rules and thresholds as the
 reports, so the slides can't drift from the analysis. Writes outputs/figures/slides/*.json:
 
+  anatomy.json              how the release is organized (volume > collection > box > folder > document
+                            > page), with one real example at every level
   pipeline.json             counts for each stage of the pipeline explorer
   code_map.json             lines of code per module, grouped by step and role
   cleaning.json             real before/after examples for each cleaning step, and the
@@ -84,6 +86,73 @@ def code_map(root: Path = Path("src")) -> list[dict]:
                     "functions": len(re.findall(r"^\s*def ", text, flags=re.M)),
                     "asserts": len(re.findall(r"^\s*assert ", text, flags=re.M))})
     return out
+
+
+# --- anatomy of the archive --------------------------------------------------------------
+
+TITLE_KINDS = [("lab and sample results", r"result|analys|sample|chain of custody|\btem\b|\bpcm\b|count sheet|bulk"),
+               ("letters, memos, e-mails", r"letter|memo|e-?mail|fax|correspondence|notice"),
+               ("inspections and surveys", r"inspection|survey|assessment|visual|facade|walkthrough"),
+               ("plans and reports", r"report|plan|summary|proposal|procedure|protocol"),
+               ("contracts, licenses, legal", r"contract|license|agreement|declaration|subpoena|affidavit|legal|invoice")]
+BIG_COLLECTION = "DEP Hard Copies (68 Boxes)"
+
+
+def archive_anatomy(raw_docs, raw_pages, mentions, entities, buildings, docs, pages, example) -> dict:
+    """The release level by level, with counts and one real example per level."""
+    d = ingestion_verify.scraped(raw_docs)
+    n_pages = raw_pages.groupby("doc_id").size()
+    doc_id, page = example
+    ex_doc = d.set_index("doc_id").loc[doc_id]
+    ex_page = raw_pages.set_index(["doc_id", "page"]).loc[(doc_id, page)]
+    ents = (mentions[(mentions["doc_id"] == doc_id) & (mentions["page"] == page)]
+            .merge(entities[["entity_type", "slug", "name"]], on=["entity_type", "slug"]))
+    bins = json.loads(ex_page["building_bins"]) if isinstance(ex_page["building_bins"], str) else []
+    blds = buildings[buildings["bin"].isin(bins)]
+    text = re.sub(r"\s*\n\s*", "\n", re.sub(clean.PORTAL_HEADER_RE, "", ex_page["text"])).strip()
+
+    big = d[d["collection"] == BIG_COLLECTION]
+    big_pages = int(n_pages.reindex(big["doc_id"]).sum())
+    titles = big["title"].str.lower()
+    stamped = pages.assign(stamped=pages["litigation_source"].notna()).merge(
+        d[["doc_id", "collection", "production_volume"]], on="doc_id")
+    by_coll = (d.assign(c=d["collection"].fillna("no collection (volume " + d["production_volume"] + ")"))
+               .groupby("c").agg(docs=("doc_id", "size"), pages=("doc_id", lambda s: int(n_pages.reindex(s).sum())))
+               .sort_values("pages", ascending=False))
+    years = docs[docs["doc_id"].isin(big["doc_id"])]["doc_date"].dt.year.value_counts()
+    return {
+        "levels": [
+            {"id": "release", "label": "Release", "count": 1, "example": "NYC 9/11 records portal, 8 Sep 2026"},
+            {"id": "volume", "label": "Production volumes", "count": int(d["production_volume"].nunique()),
+             "example": ex_doc["production_volume"]},
+            {"id": "collection", "label": "Collections", "count": int(d["collection"].nunique()),
+             "example": ex_doc["collection"]},
+            {"id": "box", "label": "Boxes", "count": int(d["box"].nunique()), "example": ex_doc["box"]},
+            {"id": "folder", "label": "Folders", "count": int(d["folder"].nunique()), "example": ex_doc["folder"].strip("“” ")},
+            {"id": "document", "label": "Documents", "count": len(d), "example": ex_doc["title"]},
+            {"id": "page", "label": "Pages", "count": int(len(raw_pages)), "example": ex_page["bates_page"]},
+        ],
+        "collections": [{"name": c, "docs": int(r.docs), "pages": int(r.pages)} for c, r in by_coll.iterrows()],
+        "big": {"name": BIG_COLLECTION, "docs": len(big), "pages": big_pages, "share_pages": round(big_pages / len(raw_pages), 3),
+                "boxes": int(big["box"].nunique()), "folders": int(big["folder"].nunique()),
+                "years": {str(int(y)): int(n) for y, n in years.sort_index().items() if 2000 <= y <= 2004},
+                "kinds": [{"kind": k, "share": round(float(titles.str.contains(rx).mean()), 3)} for k, rx in TITLE_KINDS],
+                "box_names": sorted(big["box"].dropna().unique().tolist(), key=lambda b: (b[0], len(b), b))[:3],
+                "stamped_share": round(float(stamped[stamped["collection"] == BIG_COLLECTION]["stamped"].mean()), 3),
+                "folder_examples": big["folder"].str.strip("“” ").drop_duplicates().sample(4, random_state=7).tolist()},
+        "unfiled": {"docs": int(d["collection"].isna().sum()),
+                    "stamped_share": round(float(stamped[stamped["collection"].isna()]["stamped"].mean()), 3)},
+        "documents": {"median_pages": int(n_pages.median()), "max_pages": int(n_pages.max()),
+                      "single_page": int((n_pages == 1).sum()), "agencies": int(d["agency"].nunique())},
+        "example": {"doc_id": doc_id, "page": int(page), "title": ex_doc["title"], "n_pages": int(ex_doc["n_pages"]),
+                    "bates_range": ex_doc["bates_range"], "bates_page": ex_page["bates_page"], "box": ex_doc["box"],
+                    "folder": ex_doc["folder"].strip("“” "), "collection": ex_doc["collection"],
+                    "volume": ex_doc["production_volume"], "agency": ex_doc["agency"], "url": ex_page["url"],
+                    "text": text[:620], "source": ex_page["source"], "contaminants": list(ex_page["contaminants"]),
+                    "entities": [{"type": r.entity_type, "name": r.name} for r in ents.itertuples()],
+                    "buildings": [{"name": r.name, "bin": r.bin, "class": r.building_class,
+                                   "year": int(r.year_built) if pd.notna(r.year_built) else None} for r in blds.itertuples()]},
+    }
 
 
 # --- cleaning examples -------------------------------------------------------------------
@@ -214,6 +283,7 @@ def pages_ties_data(nodes: pd.DataFrame) -> list[dict]:
 
 
 # Examples shown in the cleaning explorer (chosen because each shows one fix clearly)
+ANATOMY_EXAMPLE = ("NYC-WTC_000120318", 3)       # consultant letter on air monitoring at 1 Peck Slip (68 boxes)
 PAGE_EXAMPLE = ("NYC-WTC_000175521", 2)          # contractor letter: portal header, Bates and litigation stamps
 JUNK_EXAMPLE = ("NYC-WTC_000176014", 1)          # instrument printout the site labels "junk"
 DATE_EXAMPLES = ["NYC-WTC_000094809",            # lab-method date 1994 -> date in the title's month
@@ -221,16 +291,22 @@ DATE_EXAMPLES = ["NYC-WTC_000094809",            # lab-method date 1994 -> date 
                  "NYC-WTC_000119105"]            # unset fax clock 1999-01-01 -> title month, Feb 2002
 
 
-def main(page_example=PAGE_EXAMPLE, junk_example=JUNK_EXAMPLE, date_examples=DATE_EXAMPLES):
+def main(page_example=PAGE_EXAMPLE, junk_example=JUNK_EXAMPLE, date_examples=DATE_EXAMPLES,
+         anatomy_example=ANATOMY_EXAMPLE):
     F, P = config.FINAL, proc_settings.PROCESSED
     raw_docs = pd.read_parquet(F / "documents.parquet")
-    raw_pages = pd.read_parquet(F / "pages.parquet", columns=["doc_id", "page", "text", "source", "ocr_confidence"])
+    raw_pages = pd.read_parquet(F / "pages.parquet", columns=["doc_id", "page", "text", "source", "ocr_confidence",
+                                                              "bates_page", "url", "contaminants", "building_bins"])
     docs = pd.read_parquet(P / "documents.parquet")
     pages = pd.read_parquet(P / "pages.parquet", columns=["doc_id", "page", "text", "n_chars", "alpha_ratio", "word_ratio",
                                                           "has_usable_text", "litigation_stamp", "litigation_source"])
     entities = pd.read_parquet(P / "entities.parquet")
-    print(write_json(pipeline_numbers(raw_docs, raw_pages, pd.read_parquet(F / "entities.parquet"),
-                                      pd.read_parquet(F / "entity_mentions.parquet", columns=["doc_id"]),
+    raw_mentions = pd.read_parquet(F / "entity_mentions.parquet", columns=["entity_type", "slug", "doc_id", "page"])
+    raw_entities = pd.read_parquet(F / "entities.parquet")
+    print(write_json(archive_anatomy(raw_docs, raw_pages, raw_mentions, raw_entities,
+                                     pd.read_parquet(F / "buildings.parquet"), docs, pages, anatomy_example),
+                     "anatomy.json"))
+    print(write_json(pipeline_numbers(raw_docs, raw_pages, raw_entities, raw_mentions,
                                       pd.read_parquet(F / "buildings.parquet", columns=["bin"]), docs, pages),
                      "pipeline.json"))
     print(write_json(code_map(), "code_map.json"))
