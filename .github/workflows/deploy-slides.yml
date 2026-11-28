@@ -1,0 +1,29 @@
+name: Deploy slides
+
+on:
+  workflow_dispatch:                 # lets you run it by hand from the Actions tab
+  push:
+    branches: [main]
+    paths: ['slides/**', 'outputs/figures/**']   # only when slides or figures change
+
+permissions:
+  contents: read                     # read the repo
+  pages: write                       # publish to GitHub Pages
+  id-token: write                    # needed by the Pages deploy action
+
+concurrency:
+  group: pages
+  cancel-in-progress: false          # never run two deploys at once
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: slides    # run the commands inside slides/
+    steps:
+      - uses: actions/checkout@v4    # get the whole repo (slides + outputs/figures)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'      # install Node.js
+      - run: npm ci                  # install Slidev and the theme
